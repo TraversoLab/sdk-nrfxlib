@@ -828,7 +828,7 @@ int nrf_rpc_cmd_common(const struct nrf_rpc_group *group, uint32_t cmd,
 		*rsp_packet = NULL;
 		*rsp_len = 0;
 	} else {
-		handler = ptr1;
+		handler = (nrf_rpc_handler_t) ptr1;
 		handler_data = ptr2;
 	}
 
