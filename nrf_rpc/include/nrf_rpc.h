@@ -459,7 +459,7 @@ static inline void nrf_rpc_cmd_no_err(const struct nrf_rpc_group *group,
 				       uint32_t cmd, uint8_t *packet,
 				       size_t len, void *ptr1, void *ptr2);
 
-	nrf_rpc_cmd_common_no_err(group, cmd, packet, len, handler,
+	nrf_rpc_cmd_common_no_err(group, cmd, packet, len, (void *) handler,
 				  handler_data);
 }
 
