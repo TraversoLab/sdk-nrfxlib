@@ -184,10 +184,10 @@ struct nrf_rpc_err_report {
 		.cmd_array = &NRF_RPC_CONCAT(_name, _cmd_array),	         \
 		.evt_array = &NRF_RPC_CONCAT(_name, _evt_array),	         \
 		.data = &NRF_RPC_CONCAT(_name, _group_data),                     \
+		.transport = _transport,                                         \
 		.ack_handler = _ack_handler,				         \
 		.ack_handler_data = _ack_data,				         \
 		.strid = _strid,					         \
-		.transport = _transport,                                         \
 		.err_handler = _err_handler,				         \
 	}
 
