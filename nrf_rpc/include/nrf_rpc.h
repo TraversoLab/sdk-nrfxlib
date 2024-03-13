@@ -434,7 +434,7 @@ static inline int nrf_rpc_cmd(const struct nrf_rpc_group *group, uint8_t cmd,
 			       uint8_t *packet, size_t len, void *ptr1,
 			       void *ptr2);
 
-	return nrf_rpc_cmd_common(group, cmd, packet, len, handler,
+	return nrf_rpc_cmd_common(group, cmd, packet, len, (void *) handler,
 				  handler_data);
 }
 
