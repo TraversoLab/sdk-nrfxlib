@@ -23,7 +23,10 @@
  */
 
 #ifdef __cplusplus
+#define EXTERN_C extern "C"
 extern "C" {
+#else
+#define EXTERN_C
 #endif
 
 /** @brief nRF RPC protocol version. */

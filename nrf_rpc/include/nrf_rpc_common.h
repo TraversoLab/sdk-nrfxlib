@@ -111,7 +111,7 @@ extern "C" {
 #define NRF_RPC_AUTO_ARR(_name, _array_key)				       \
 	const uint8_t NRF_RPC_CONCAT(_name, _auto_arr_end) __used	       \
 	__attribute__((__section__(".nrf_rpc." _array_key ".c")));	       \
-	const uint8_t *const _name __used				       \
+	EXTERN_C const uint8_t *const _name __used				       \
 	__attribute__((__section__(".nrf_rpc." _array_key ".a"))) =	       \
 		&NRF_RPC_CONCAT(_name, _auto_arr_end)
 
