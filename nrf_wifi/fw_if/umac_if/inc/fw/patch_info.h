@@ -26,6 +26,7 @@ enum nrf70_feature_flags {
 	NRF70_FEAT_SYSTEM_MODE = BIT(0),
 	NRF70_FEAT_RADIO_TEST = BIT(1),
 	NRF70_FEAT_SCAN_ONLY = BIT(2),
+	NRF70_FEAT_SYSTEM_WITH_RAW_MODES = BIT(3),
 };
 
 enum nrf70_image_ids {
@@ -56,7 +57,7 @@ struct nrf70_fw_image_info {
 
 #define RPU_FAMILY         (1)
 #define RPU_MAJOR_VERSION   (2)
-#define RPU_MINOR_VERSION   (10)
+#define RPU_MINOR_VERSION   (11)
 #define RPU_PATCH_VERSION   (0)
 
 #endif /* _PATCH_INFO_H */

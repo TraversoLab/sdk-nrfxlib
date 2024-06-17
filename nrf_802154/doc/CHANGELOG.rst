@@ -10,6 +10,14 @@ Changelog
 All notable changes to this project are documented in this file.
 See also :ref:`nrf_802154_limitations` for permanent limitations.
 
+Main branch - nRF 802.15.4 Radio Driver
+***************************************
+
+Bug fixes
+=========
+
+* Fixed an issue causing the driver to report a very inaccurate timestamp if a delayed operation starts shortly after sleep request. (KRKNWK-18589)
+
 nRF Connect SDK v2.6.0 - nRF 802.15.4 Radio Driver
 **************************************************
 
@@ -250,7 +258,7 @@ Added
 Notable Changes
 ===============
 
-* The release notes of the legacy versions of the Radio Driver are available in the `Radio Driver section`_ of the Infocenter.
+* The release notes of the legacy versions of the Radio Driver are available in the `Radio Driver section`_.
 * The changelog of the previous versions of the 802.15.4 SL library is now located at the bottom of this page.
 * The Radio Driver documentation will now also include the Service Layer documentation.
 * Future versions of the Radio Driver and the Service Layer will follow NCS version tags.

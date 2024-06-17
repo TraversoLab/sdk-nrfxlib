@@ -92,6 +92,7 @@ static struct nrf_rpc_os_event groups_init_event;
 
 /* Number of groups */
 static uint8_t group_count;
+static uint8_t waiting_group_count;
 
 static uint8_t initialized_group_count;
 
@@ -297,7 +298,7 @@ static int group_init_send(const struct nrf_rpc_group *group)
 	hdr.type = NRF_RPC_PACKET_TYPE_INIT;
 	hdr.id = 0;
 	hdr.src_group_id = group->data->src_group_id;
-	hdr.dst_group_id = NRF_RPC_ID_UNKNOWN;
+	hdr.dst_group_id = group->data->dst_group_id;
 
 	len = strlen(group->strid) + NRF_RPC_PROTOCOL_VERSION_FIELD_SIZE;
 
@@ -344,7 +345,7 @@ static inline bool packet_validate(const uint8_t *packet)
 
 static int transport_init(nrf_rpc_tr_receive_handler_t receive_cb)
 {
-	int err;
+	int err = 0;
 	void *iter;
 	const struct nrf_rpc_group *group;
 
@@ -369,17 +370,25 @@ static int transport_init(nrf_rpc_tr_receive_handler_t receive_cb)
 		}
 
 		group->data->transport_initialized = true;
-		err = group_init_send(group);
-		if (err) {
-			NRF_RPC_ERR("Failed to send group init packet for group id: %d strid: %s",
-				    data->src_group_id, group->strid);
-			continue;
+
+		if (group->flags & NRF_RPC_FLAGS_INITIATOR) {
+			err = group_init_send(group);
+			if (err) {
+				NRF_RPC_ERR("Failed to send group init packet for group id: %d strid: %s err: %d",
+					data->src_group_id, group->strid, err);
+				continue;
+			}
 		}
 	}
 
-	err = nrf_rpc_os_event_wait(&groups_init_event, CONFIG_NRF_RPC_GROUP_INIT_WAIT_TIME);
-	if (err) {
-		NRF_RPC_ERR("Not all groups are ready to use.");
+	/* Group initialization errors are not propagated to the caller. */
+	err = 0;
+
+	if (waiting_group_count > 0) {
+		err = nrf_rpc_os_event_wait(&groups_init_event, CONFIG_NRF_RPC_GROUP_INIT_WAIT_TIME);
+		if (err) {
+			NRF_RPC_ERR("Not all groups are ready to use.");
+		}
 	}
 
 	return err;
@@ -518,8 +527,7 @@ static bool protocol_version_check(const struct init_packet_data *init_data)
 
 	return false;
 }
-static const struct nrf_rpc_group *remote_group_init(uint8_t src_group_id, const char *strid,
-						     size_t strid_len)
+static const struct nrf_rpc_group *group_from_strid(const char *strid, size_t strid_len)
 {
 	void *iter;
 	const struct nrf_rpc_group *group;
@@ -528,15 +536,9 @@ static const struct nrf_rpc_group *remote_group_init(uint8_t src_group_id, const
 				 const struct nrf_rpc_group)) {
 		if ((strid_len == strlen(group->strid)) &&
 		    (memcmp(strid, group->strid, strid_len) == 0)) {
-			group->data->dst_group_id = src_group_id;
-			NRF_RPC_DBG("Found corresponding local group. Remote id: %d, Local id: %d",
-				    src_group_id, group->data->dst_group_id);
-
 			return group;
 		}
 	}
-
-	NRF_RPC_ERR("Remote group does not match local group");
 
 	return NULL;
 }
@@ -578,6 +580,9 @@ static int init_packet_handle(struct header *hdr, const struct nrf_rpc_group **g
 {
 	int err;
 	struct init_packet_data init_data = {0};
+	struct nrf_rpc_group_data *group_data;
+	bool first_init;
+	bool wait_on_init;
 
 	*group = NULL;
 
@@ -597,19 +602,48 @@ static int init_packet_handle(struct header *hdr, const struct nrf_rpc_group **g
 	}
 
 	/* Check for the corresponding local group and initialize it. */
-	*group = remote_group_init(hdr->src_group_id, init_data.strid, init_data.strid_len);
+	*group = group_from_strid(init_data.strid, init_data.strid_len);
 	if (*group == NULL) {
+		NRF_RPC_ERR("Remote group does not match local group");
 		NRF_RPC_ASSERT(false);
 		return -NRF_EFAULT;
 	}
 
-	initialized_group_count++;
-	if (initialized_group_count == group_count) {
-		/* All group are initialized. */
-		nrf_rpc_os_event_set(&groups_init_event);
+	group_data = (*group)->data;
+	first_init = group_data->dst_group_id == NRF_RPC_ID_UNKNOWN;
+	group_data->dst_group_id = hdr->src_group_id;
+	wait_on_init = (*group)->flags & NRF_RPC_FLAGS_WAIT_ON_INIT;
+	nrf_rpc_group_bound_handler_t bound_handler = (*group)->bound_handler;
+
+	NRF_RPC_DBG("Found corresponding local group. Remote id: %d, Local id: %d",
+		    hdr->src_group_id, group_data->src_group_id);
+
+	if (bound_handler != NULL) {
+		bound_handler(*group);
 	}
 
-	return 0;
+	if (first_init && wait_on_init) {
+		++initialized_group_count;
+
+		if (initialized_group_count == waiting_group_count) {
+			/* All groups are initialized. */
+			nrf_rpc_os_event_set(&groups_init_event);
+		}
+	}
+
+	if (hdr->dst_group_id == NRF_RPC_ID_UNKNOWN) {
+		/*
+		 * If remote processor does not know our group id, send an init packet back,
+		 * since it might have missed our original init packet.
+		 */
+		err = group_init_send(*group);
+		if (err) {
+			NRF_RPC_ERR("Failed to send group init packet for group id: %d strid: %s",
+				    group_data->src_group_id, (**group).strid);
+		}
+	}
+
+	return err;
 }
 
 /* Callback from transport layer that handles incoming. */
@@ -966,6 +1000,7 @@ int nrf_rpc_init(nrf_rpc_err_handler_t err_handler)
 	void *iter;
 	const struct nrf_rpc_group *group;
 	uint8_t group_id = 0;
+	uint8_t wait_count = 0;
 
 	NRF_RPC_DBG("Initializing nRF RPC module");
 
@@ -986,9 +1021,13 @@ int nrf_rpc_init(nrf_rpc_err_handler_t err_handler)
 		NRF_RPC_DBG("Group '%s' has id %d", group->strid, group_id);
 		data->src_group_id = group_id;
 		group_id++;
+		if (group->flags & NRF_RPC_FLAGS_WAIT_ON_INIT) {
+			wait_count++;
+		}
 	}
 
 	group_count = group_id;
+	waiting_group_count = wait_count;
 
 	memset(&cmd_ctx_pool, 0, sizeof(cmd_ctx_pool));
 

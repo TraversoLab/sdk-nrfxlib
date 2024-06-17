@@ -124,11 +124,11 @@ extern "C" {
 /** @brief Default ISO RX SDU buffer size. */
 #define SDC_DEFAULT_ISO_RX_SDU_BUFFER_SIZE 251
 
-/** @brief Default HCI ISO TX buffer count. */
-#define SDC_DEFAULT_ISO_TX_HCI_BUFFER_COUNT 0
+/** @brief Default ISO SDU TX buffer count. */
+#define SDC_DEFAULT_ISO_TX_SDU_BUFFER_COUNT 0
 
-/** @brief Default HCI ISO TX buffer size. */
-#define SDC_DEFAULT_ISO_TX_HCI_BUFFER_SIZE 251
+/** @brief Default ISO SDU TX buffer size. */
+#define SDC_DEFAULT_ISO_TX_SDU_BUFFER_SIZE 247
 
 /** @brief Default ISO TX PDU buffer per stream count. */
 #define SDC_DEFAULT_ISO_TX_PDU_BUFFER_PER_STREAM_COUNT 0
@@ -148,8 +148,8 @@ extern "C" {
  */
 
 /** @brief Auxiliary defines, not to be used outside of this file. */
-#define __MEM_MINIMAL_CENTRAL_LINK_SIZE 1015
-#define __MEM_MINIMAL_PERIPHERAL_LINK_SIZE 1140
+#define __MEM_MINIMAL_CENTRAL_LINK_SIZE 1043
+#define __MEM_MINIMAL_PERIPHERAL_LINK_SIZE 1164
 #define __MEM_TX_BUFFER_OVERHEAD_SIZE 15
 #define __MEM_RX_BUFFER_OVERHEAD_SIZE 14
 
@@ -187,21 +187,32 @@ extern "C" {
 /** Maximum shared memory required for peripheral links. */
 #define SDC_MEM_PERIPHERAL_LINKS_SHARED  17
 
+/** @brief Maximum memory required when supporting LE Power Control.
+ *
+ * @param[in] num_links Total number of peripheral and central links supported.
+ */
+#define SDC_MEM_LE_POWER_CONTROL(num_links) ((num_links) > 0 ? (12 + (num_links) * 26) : 0)
+
 /** Memory required for Quality of Service (QoS) channel survey module. */
 #define SDC_MEM_QOS_CHANNEL_SURVEY (40)
 
-/** Memory required for scanner buffers when only supporting legacy scanning. */
-#define SDC_MEM_SCAN_BUFFER(buffer_count) (26 + (buffer_count) * 88)
+/** Memory required for the scanner when only supporting legacy scanning. */
+#define SDC_MEM_SCAN(buffer_count) (340 + (buffer_count) * 96)
 
-/** Memory required for scanner buffers when supporting extended scanning. */
-#define SDC_MEM_SCAN_BUFFER_EXT(buffer_count) (26 + (buffer_count) * 306)
+/** Memory required for the scanner when supporting extended scanning. */
+#define SDC_MEM_SCAN_EXT(buffer_count) (340 + (buffer_count) * 312)
+
+/** Additional memory required for the initiator when supporting scanning
+ *  and initiating at the same time.
+ */
+#define SDC_MEM_INITIATOR (312)
 
 /** Memory required for the Filter Accept List */
 #define SDC_MEM_FAL(max_num_entries) ((max_num_entries) > 0 ? (4 + (max_num_entries) * 8) : 0)
 
 /** @brief Auxiliary defines, not to be used outside of this file. */
-#define __MEM_PER_ADV_SET_LOW(max_adv_data) ((4752+(max_adv_data)*18)/10)
-#define __MEM_PER_ADV_SET_HIGH(max_adv_data) (665+(max_adv_data))
+#define __MEM_PER_ADV_SET_LOW(max_adv_data) ((4833+(max_adv_data)*18)/10)
+#define __MEM_PER_ADV_SET_HIGH(max_adv_data) (671+(max_adv_data))
 #define __MEM_PER_PERIODIC_ADV_SET_LOW(max_adv_data) ((2658+(max_adv_data)*18)/10)
 #define __MEM_PER_PERIODIC_ADV_SET_HIGH(max_adv_data) (457+(max_adv_data))
 
@@ -249,8 +260,8 @@ extern "C" {
 #define __MEM_MINIMAL_PERIODIC_ADV_RSP_SET_SIZE_WITH_RX (465)
 #define __MEM_MINIMAL_PERIODIC_ADV_RSP_SET_SIZE_WITHOUT_RX (166)
 #define __MEM_FOR_PERIODIC_ADV_RSP_FAILURE_REPORTING (224)
-#define __MEM_PER_ISO_PDU_POOL(count) ((count) > 0 ? (16 + (count) * 296) : 0)
-#define __MEM_PER_ISO_TX_HCI_BUFFER(count) ((count) > 0 ? (12 + (count) * 296) : 0)
+#define __MEM_PER_ISO_PDU_POOL(count) ((count) > 0 ? (16 + (count) * 288) : 0)
+#define __MEM_PER_ISO_TX_HCI_BUFFER(count) ((count) > 0 ? (12 + (count) * 300) : 0)
 
 /** Memory required per periodic advertising with responses set.
  *
@@ -272,13 +283,13 @@ extern "C" {
 #define SDC_MEM_PER_CIG(count) ((count) > 0 ? (13 + (count) * 123) : 0)
 
 /** @brief Maximum memory required per CIS. Buffer and CIG memory comes in addition. */
-#define SDC_MEM_PER_CIS(count) ((count) > 0 ? (13 + (count) * 555) : 0)
+#define SDC_MEM_PER_CIS(count) ((count) > 0 ? (13 + (count) * 548) : 0)
 
 /** @brief Maximum memory required per BIG. */
 #define SDC_MEM_PER_BIG(count) ((count) > 0 ? (13 + (count) * 284) : 0)
 
 /** @brief Maximum memory required per BIS. Buffer and BIG memory comes in addition. */
-#define SDC_MEM_PER_BIS(count) ((count) > 0 ? (13 + (count) * 275) : 0)
+#define SDC_MEM_PER_BIS(count) ((count) > 0 ? (13 + (count) * 268) : 0)
 
 /** @brief Maximum memory required for the ISO RX PDU pool per stream.
  *  @param[in] rx_pdu_buffer_per_stream_count Number of RX PDU buffers allocated for each BIS or CIS stream. Minimum of 1.
@@ -288,20 +299,24 @@ extern "C" {
 #define SDC_MEM_ISO_RX_PDU_POOL_PER_STREAM_SIZE(rx_pdu_buffer_per_stream_count, cis_count, bis_sink_count)     \
       (__MEM_PER_ISO_PDU_POOL(rx_pdu_buffer_per_stream_count) * ((cis_count) + (bis_sink_count)))
 
-/** @brief Maximum memory required for the ISO RX path SDUs. */
-#define SDC_MEM_ISO_RX_SDU_POOL_SIZE(count) ((count) > 0 ? (8 + (count) * 272) : 0)
+/** @brief Maximum memory required for the ISO RX path SDUs.
+ * @param[in] count Number of shared SDUs allocated for the RX path.
+ * @param[in] size  Maximum size of SDUs being used. */
+#define SDC_MEM_ISO_RX_SDU_POOL_SIZE(count, size) ((count) > 0 ? (8 + (count) * ((size) + 13)) : 0)
 
-/** @brief Maximum memory required for the ISO TX pool.
- *  @param[in] tx_hci_buffer_count Number of HCI ISO TX buffers.
- *  @param[in] tx_pdu_buffer_per_stream_count Number of TX PDU buffers allocated for each BIS or CIS stream. Minimum of 1.
- *                                            For BIS, this value determines the maximum supported pretransmission offset.
+/** @brief Maximum memory required for the ISO TX PDU pool.
+ *  @param[in] tx_pdu_buffer_per_stream_count Number of TX PDU buffers allocated for each BIS or CIS stream.
+ *                                            For BIS, this value determines the number of pretransmission that can be stored.
  *  @param[in] cis_count The number of supported CIS streams.
  *  @param[in] bis_source_count The number of supported source BIS streams. */
-#define SDC_MEM_ISO_TX_POOL_SIZE(tx_hci_buffer_count, tx_pdu_buffer_per_stream_count, cis_count, bis_source_count) \
-     (((tx_hci_buffer_count) > 0 && (tx_pdu_buffer_per_stream_count) > 0) ?                                 \
-     (__MEM_PER_ISO_TX_HCI_BUFFER(tx_hci_buffer_count)                                                      \
-     + (__MEM_PER_ISO_PDU_POOL(tx_pdu_buffer_per_stream_count) * ((cis_count) + (bis_source_count)))        \
-     ) : 0)
+#define SDC_MEM_ISO_TX_PDU_POOL_SIZE(tx_pdu_buffer_per_stream_count, cis_count, bis_source_count)     \
+      ((tx_pdu_buffer_per_stream_count) > 0 ? \
+       __MEM_PER_ISO_PDU_POOL(tx_pdu_buffer_per_stream_count) * ((cis_count) + (bis_source_count)) : 0)
+
+/** @brief Maximum memory required for the ISO TX path SDUs.
+ * @param[in] count Number of shared SDUs allocated for the TX path.
+ * @param[in] size  Maximum size of SDUs being used. */
+#define SDC_MEM_ISO_TX_SDU_POOL_SIZE(count, size) ((count) > 0 ? (12 + (count) * ((size) + 49)) : 0)
 
 /** @} end of sdc_mem_defines */
 
@@ -440,16 +455,16 @@ typedef struct
 
 typedef struct
 {
-    /** Configures the number of shared HCI TX buffers allocated for ISO.
+    /** Configures the number of shared SDU TX buffers allocated for ISO.
      *
-     * Default: @ref SDC_DEFAULT_ISO_TX_HCI_BUFFER_COUNT.
+     * Default: @ref SDC_DEFAULT_ISO_TX_SDU_BUFFER_COUNT.
      */
-    uint8_t tx_hci_buffer_count;
-    /** Configures the size of shared HCI TX buffers allocated for ISO.
+    uint8_t tx_sdu_buffer_count;
+    /** Configures the size of shared SDU TX buffers allocated for ISO.
      *
-     * Default: @ref SDC_DEFAULT_ISO_TX_HCI_BUFFER_SIZE.
+     * Default: @ref SDC_DEFAULT_ISO_TX_SDU_BUFFER_SIZE.
      */
-    uint16_t tx_hci_buffer_size;
+    uint16_t tx_sdu_buffer_size;
     /** Configures the number of TX PDU buffers allocated per ISO stream.
      *
      * This is the number of maximum size (251 bytes) PDU buffers. When PDU size is smaller
@@ -815,6 +830,21 @@ int32_t sdc_support_central(void);
  * @retval -NRF_EOPNOTSUPP  These features are not supported.
  */
 int32_t sdc_support_ext_central(void);
+
+/** @brief Support for scanning and initiating at the same time.
+ *
+ * After this API is called, the controller will support:
+ *   - Creating a connection while passive or active scanning is enabled
+ *   - Enabling passive or active scanning while a connection attempt is ongoing
+ *
+ * This API should be called only when centrals are supported (the application should
+ * call either @ref sdc_support_central() or @ref sdc_support_ext_central()).
+ *
+ * @retval 0               Success
+ * @retval -NRF_EPERM      This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP Scanning and initiating in parallel is not supported.
+ */
+int32_t sdc_support_parallel_scanning_and_initiating(void);
 
 /** @brief Support Data Length Extensions for a central device
  *
@@ -1199,6 +1229,34 @@ int32_t sdc_coex_adv_mode_configure(bool adv_cont_on_denial);
  * @retval -NRF_EPERM  This API must be called before @ref sdc_enable().
  */
 int32_t sdc_default_tx_power_set(int8_t requested_power_level);
+
+/** @brief Support Connection Subrating for central role
+ *
+ * After this API is called, the controller will support the HCI commands
+ * related to Connection Subrating.
+ *
+ * @note The application is required to call both @ref sdc_support_connection_subrating_central() and @ref sdc_support_connection_subrating_peripheral()
+ *       if both central and peripheral roles are supported.
+ *
+ * @retval 0                Success
+ * @retval -NRF_EPERM       This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP  Connection Subrating is not supported.
+ */
+int32_t sdc_support_connection_subrating_central(void);
+
+/** @brief Support Connection Subrating for peripheral role
+ *
+ * After this API is called, the controller will support the HCI commands
+ * related to Connection Subrating.
+ *
+ * @note The application is required to call both @ref sdc_support_connection_subrating_central() and @ref sdc_support_connection_subrating_peripheral()
+ *       if both central and peripheral roles are supported.
+ *
+ * @retval 0                Success
+ * @retval -NRF_EPERM       This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP  Connection Subrating is not supported.
+ */
+int32_t sdc_support_connection_subrating_peripheral(void);
 
 #ifdef __cplusplus
 }

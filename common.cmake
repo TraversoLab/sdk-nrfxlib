@@ -38,6 +38,17 @@ function(nrfxlib_calculate_lib_path lib_path)
   if(${CALC_LIB_PATH_SOC_MODE})
     # CMake regex does not support {4}
     string(REGEX REPLACE "_[a-zA-Z][a-zA-Z][a-zA-Z][a-zA-Z]$" "" arch_soc_dir ${CONFIG_SOC})
+
+    # Apply CPU cluster manually for devices that have multiple cores
+    if(DEFINED CONFIG_SOC_NRF5340_CPUAPP)
+      set(arch_soc_dir ${arch_soc_dir}_cpuapp)
+    elseif(DEFINED CONFIG_SOC_NRF5340_CPUNET)
+      set(arch_soc_dir ${arch_soc_dir}_cpunet)
+    elseif(DEFINED CONFIG_SOC_NRF54L15_ENGA_CPUAPP)
+      set(arch_soc_dir ${arch_soc_dir}_cpuapp)
+    elseif(DEFINED CONFIG_SOC_NRF54H20_CPURAD)
+      set(arch_soc_dir ${arch_soc_dir}_cpurad)
+    endif()
   elseif(CONFIG_SOC_SERIES_BSIM_NRFXX)
     set(arch_soc_dir "bsim_nrfxx")
   else()

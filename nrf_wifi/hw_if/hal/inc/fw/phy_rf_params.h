@@ -14,6 +14,7 @@
 
 #define NRF_WIFI_RF_PARAMS_SIZE 200
 #define NRF_WIFI_RF_PARAMS_CONF_SIZE 42
+#define NUM_PCB_LOSS_OFFSET 4
 
 #ifdef CONFIG_NRF700X_RADIO_TEST
 #define NRF_WIFI_DEF_RF_PARAMS "007077003F032424001000002800323500000C0008087D8105010071630300EED501001F6F00003B350100F52E0000E35E0000B7B6000066EFFEFFB5F60000896200007A840200E28FFCFF080808080408120100000000A1A10178000000080050003B020726181818181A120A140E0600"
@@ -152,23 +153,23 @@
 #define CSP_XO_VAL 0x2A
 
 /** Max TX power allowed for DSSS and OFDM in 2.4GHz band */
-#define CSP_MAX_TX_PWR_DSSS 0x58
-#define CSP_MAX_TX_PWR_LB_MCS7 0x48
-#define CSP_MAX_TX_PWR_LB_MCS0 0x50
+#define CSP_MAX_TX_PWR_DSSS 0x48
+#define CSP_MAX_TX_PWR_LB_MCS7 0x44
+#define CSP_MAX_TX_PWR_LB_MCS0 0x44
 
 /** Max TX power allowed for MCS7 for channels in the range,
  * 36 to 64, 96 to 132 and 136 to 177
  */
-#define CSP_MAX_TX_PWR_HB_LOW_CHAN_MCS7 0x40
-#define CSP_MAX_TX_PWR_HB_MID_CHAN_MCS7 0x40
-#define CSP_MAX_TX_PWR_HB_HIGH_CHAN_MCS7 0x40
+#define CSP_MAX_TX_PWR_HB_LOW_CHAN_MCS7 0x3C
+#define CSP_MAX_TX_PWR_HB_MID_CHAN_MCS7 0x3C
+#define CSP_MAX_TX_PWR_HB_HIGH_CHAN_MCS7 0x3C
 
 /** Max TX power allowed for MCS0 for channels in the range,
  * 36 to 64, 96 to 132 and 136 to 177
  */
-#define CSP_MAX_TX_PWR_HB_LOW_CHAN_MCS0 0x50
-#define CSP_MAX_TX_PWR_HB_MID_CHAN_MCS0 0x50
-#define CSP_MAX_TX_PWR_HB_HIGH_CHAN_MCS0 0x50
+#define CSP_MAX_TX_PWR_HB_LOW_CHAN_MCS0 0x3C
+#define CSP_MAX_TX_PWR_HB_MID_CHAN_MCS0 0x3C
+#define CSP_MAX_TX_PWR_HB_HIGH_CHAN_MCS0 0x3C
 
 /** Max chip temperature at which the TX power backoff to be applied. */
 #define CSP_MAX_CHIP_TEMP 0x43
@@ -188,14 +189,14 @@
 /** TX power backoff values to be applied in 2.4GHz and 5GHz band when
  * the voltage is less than NRF_WIFI_VBAT_VERYLOW
  */
-#define CSP_LB_VBT_LT_VLOW 0xF8
-#define CSP_HB_VBT_LT_VLOW 0xE8
+#define CSP_LB_VBT_LT_VLOW 0xFC
+#define CSP_HB_VBT_LT_VLOW 0xEC
 
 /** TX power backoff values to be applied in 2.4GHz and 5GHz band when
  * the voltage is less than NRF_WIFI_VBAT_LOW
  */
-#define CSP_LB_VBT_LT_LOW 0xFC
-#define CSP_HB_VBT_LT_LOW 0xF4
+#define CSP_LB_VBT_LT_LOW 0x00
+#define CSP_HB_VBT_LT_LOW 0xF8
 
 
 /** XO adjustment value */
@@ -336,6 +337,16 @@ enum MAX_POWER_OFFSETS {
 	NRF_WIFI_MAX_OP_PWR_5GHZ_LB_MCS0,
 	NRF_WIFI_MAX_OP_PWR_5GHZ_MID_MCS0,
 	NRF_WIFI_MAX_OP_PWR_5GHZ_HI_MCS0
+};
+
+/** The byte offsets of RF parameters indicate the start offset
+ * of PCB loss for 2.4 GHz and 5 GHz bands.
+ */
+enum PCB_LOSS_BYTE_OFFSETS {
+	PCB_LOSS_BYTE_2G_OFST = 185,
+	PCB_LOSS_BYTE_5G_BAND1_OFST,
+	PCB_LOSS_BYTE_5G_BAND2_OFST,
+	PCB_LOSS_BYTE_5G_BAND3_OFST
 };
 
 /** The byte offsets of RF parameters indicate the start offset

@@ -372,6 +372,8 @@ enum nrf_wifi_status hal_rpu_ps_wake(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx)
 				      RPU_PS_WAKE_TIMEOUT_S,
 				      reg_val,
 				      rpu_ps_state_mask);
+		nrf_wifi_osal_tasklet_schedule(hal_dev_ctx->hpriv->opriv,
+					       hal_dev_ctx->recovery_tasklet);
 		goto out;
 	}
 	hal_dev_ctx->rpu_ps_state = RPU_PS_STATE_AWAKE;
@@ -1060,14 +1062,6 @@ void hal_rpu_eventq_drain(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx)
 						hal_dev_ctx->lock_rx,
 						&flags);
 
-		if (hal_dev_ctx->hal_status != NRF_WIFI_HAL_STATUS_ENABLED) {
-			/* Ignore the interrupt if the HAL is not enabled */
-			nrf_wifi_osal_spinlock_irq_rel(hal_dev_ctx->hpriv->opriv,
-						hal_dev_ctx->lock_rx,
-						&flags);
-			goto out;
-		}
-
 		event = nrf_wifi_utils_q_dequeue(hal_dev_ctx->hpriv->opriv,
 						 hal_dev_ctx->event_q);
 
@@ -1097,6 +1091,51 @@ void nrf_wifi_hal_proc_ctx_set(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx,
 	hal_dev_ctx->curr_proc = proc;
 }
 
+
+static enum nrf_wifi_status hal_rpu_recovery(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx)
+{
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
+
+	if (!hal_dev_ctx->hpriv->rpu_recovery_callbk_fn) {
+		nrf_wifi_osal_log_dbg(hal_dev_ctx->hpriv->opriv,
+				      "%s: RPU recovery callback not registered",
+				      __func__);
+		goto out;
+	}
+
+	status = hal_dev_ctx->hpriv->rpu_recovery_callbk_fn(hal_dev_ctx->mac_dev_ctx, NULL, 0);
+	if (status != NRF_WIFI_STATUS_SUCCESS) {
+		nrf_wifi_osal_log_err(hal_dev_ctx->hpriv->opriv,
+				      "%s: RPU recovery failed",
+				      __func__);
+		goto out;
+	}
+
+out:
+	return status;
+}
+
+static void recovery_tasklet_fn(unsigned long data)
+{
+	struct nrf_wifi_hal_dev_ctx *hal_dev_ctx = NULL;
+	unsigned long flags = 0;
+
+	hal_dev_ctx = (struct nrf_wifi_hal_dev_ctx *)data;
+	if (!hal_dev_ctx) {
+		nrf_wifi_osal_log_err(hal_dev_ctx->hpriv->opriv,
+				      "%s: Invalid hal_dev_ctx",
+				      __func__);
+		return;
+	}
+
+	nrf_wifi_osal_spinlock_irq_take(hal_dev_ctx->hpriv->opriv,
+					hal_dev_ctx->lock_recovery,
+					&flags);
+	hal_rpu_recovery(hal_dev_ctx);
+	nrf_wifi_osal_spinlock_irq_rel(hal_dev_ctx->hpriv->opriv,
+				       hal_dev_ctx->lock_recovery,
+				       &flags);
+}
 
 struct nrf_wifi_hal_dev_ctx *nrf_wifi_hal_dev_add(struct nrf_wifi_hal_priv *hpriv,
 						  void *mac_dev_ctx)
@@ -1182,6 +1221,29 @@ struct nrf_wifi_hal_dev_ctx *nrf_wifi_hal_dev_add(struct nrf_wifi_hal_priv *hpri
 				   event_tasklet_fn,
 				   (unsigned long)hal_dev_ctx);
 
+	hal_dev_ctx->recovery_tasklet = nrf_wifi_osal_tasklet_alloc(hpriv->opriv,
+		NRF_WIFI_TASKLET_TYPE_BH);
+	if (!hal_dev_ctx->recovery_tasklet) {
+		nrf_wifi_osal_log_err(hpriv->opriv,
+				      "%s: Unable to allocate recovery_tasklet",
+				      __func__);
+		goto event_tasklet_free;
+	}
+	nrf_wifi_osal_tasklet_init(hpriv->opriv,
+				   hal_dev_ctx->recovery_tasklet,
+				   recovery_tasklet_fn,
+				   (unsigned long)hal_dev_ctx);
+
+	hal_dev_ctx->lock_recovery = nrf_wifi_osal_spinlock_alloc(hpriv->opriv);
+	if (!hal_dev_ctx->lock_recovery) {
+		nrf_wifi_osal_log_err(hpriv->opriv,
+				      "%s: Unable to allocate recovery lock",
+				      __func__);
+		goto recovery_tasklet_free;
+	}
+
+	nrf_wifi_osal_spinlock_init(hpriv->opriv,
+				    hal_dev_ctx->lock_recovery);
 #ifdef CONFIG_NRF_WIFI_LOW_POWER
 	status = hal_rpu_ps_init(hal_dev_ctx);
 
@@ -1189,7 +1251,7 @@ struct nrf_wifi_hal_dev_ctx *nrf_wifi_hal_dev_add(struct nrf_wifi_hal_priv *hpri
 		nrf_wifi_osal_log_err(hpriv->opriv,
 				      "%s: hal_rpu_ps_init failed",
 				      __func__);
-		goto tasklet_free;
+		goto lock_recovery_free;
 	}
 #endif /* CONFIG_NRF_WIFI_LOW_POWER */
 
@@ -1200,7 +1262,7 @@ struct nrf_wifi_hal_dev_ctx *nrf_wifi_hal_dev_add(struct nrf_wifi_hal_priv *hpri
 		nrf_wifi_osal_log_err(hpriv->opriv,
 				      "%s: nrf_wifi_bal_dev_add failed",
 				      __func__);
-		goto tasklet_free;
+		goto lock_recovery_free;
 	}
 
 	status = hal_rpu_irq_enable(hal_dev_ctx);
@@ -1274,7 +1336,13 @@ rx_buf_free:
 #endif /* !CONFIG_NRF700X_RADIO_TEST */
 bal_dev_free:
 	nrf_wifi_bal_dev_rem(hal_dev_ctx->bal_dev_ctx);
-tasklet_free:
+lock_recovery_free:
+	nrf_wifi_osal_spinlock_free(hpriv->opriv,
+					hal_dev_ctx->lock_recovery);
+recovery_tasklet_free:
+	nrf_wifi_osal_tasklet_free(hpriv->opriv,
+					hal_dev_ctx->recovery_tasklet);
+event_tasklet_free:
 	nrf_wifi_osal_tasklet_free(hpriv->opriv,
 					hal_dev_ctx->event_tasklet);
 lock_rx_free:
@@ -1303,9 +1371,12 @@ void nrf_wifi_hal_dev_rem(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx)
 	unsigned int i = 0;
 
 	nrf_wifi_osal_tasklet_kill(hal_dev_ctx->hpriv->opriv,
-				   hal_dev_ctx->event_tasklet);
+				   hal_dev_ctx->recovery_tasklet);
+	nrf_wifi_osal_tasklet_free(hal_dev_ctx->hpriv->opriv,
+				   hal_dev_ctx->recovery_tasklet);
 
-	hal_rpu_eventq_drain(hal_dev_ctx);
+	nrf_wifi_osal_tasklet_kill(hal_dev_ctx->hpriv->opriv,
+				   hal_dev_ctx->event_tasklet);
 
 	nrf_wifi_osal_tasklet_free(hal_dev_ctx->hpriv->opriv,
 				   hal_dev_ctx->event_tasklet);
@@ -1388,6 +1459,7 @@ enum nrf_wifi_status nrf_wifi_hal_dev_init(struct nrf_wifi_hal_dev_ctx *hal_dev_
 	}
 
 	hal_dev_ctx->rpu_info.tx_cmd_base = RPU_MEM_TX_CMD_BASE;
+	nrf_wifi_hal_enable(hal_dev_ctx);
 out:
 	return status;
 }
@@ -1395,7 +1467,9 @@ out:
 
 void nrf_wifi_hal_dev_deinit(struct nrf_wifi_hal_dev_ctx *hal_dev_ctx)
 {
+	nrf_wifi_hal_disable(hal_dev_ctx);
 	nrf_wifi_bal_dev_deinit(hal_dev_ctx->bal_dev_ctx);
+	hal_rpu_eventq_drain(hal_dev_ctx);
 }
 
 
@@ -1425,6 +1499,7 @@ enum nrf_wifi_status nrf_wifi_hal_irq_handler(void *data)
 #ifdef CONFIG_NRF_WIFI_LOW_POWER
 	enum RPU_PS_STATE ps_state = RPU_PS_STATE_ASLEEP;
 #endif /* CONFIG_NRF_WIFI_LOW_POWER */
+	bool do_rpu_recovery = false;
 
 	hal_dev_ctx = (struct nrf_wifi_hal_dev_ctx *)data;
 
@@ -1447,7 +1522,7 @@ enum nrf_wifi_status nrf_wifi_hal_irq_handler(void *data)
 #endif /* CONFIG_NRF_WIFI_LOW_POWER_DBG */
 #endif /* CONFIG_NRF_WIFI_LOW_POWER */
 
-	status = hal_rpu_irq_process(hal_dev_ctx);
+	status = hal_rpu_irq_process(hal_dev_ctx, &do_rpu_recovery);
 
 #ifdef CONFIG_NRF_WIFI_LOW_POWER
 	hal_rpu_ps_set_state(hal_dev_ctx,
@@ -1458,6 +1533,12 @@ enum nrf_wifi_status nrf_wifi_hal_irq_handler(void *data)
 #endif /* CONFIG_NRF_WIFI_LOW_POWER */
 
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
+		goto out;
+	}
+
+	if (do_rpu_recovery) {
+		nrf_wifi_osal_tasklet_schedule(hal_dev_ctx->hpriv->opriv,
+					       hal_dev_ctx->recovery_tasklet);
 		goto out;
 	}
 
@@ -1671,7 +1752,10 @@ nrf_wifi_hal_init(struct nrf_wifi_osal_priv *opriv,
 		  struct nrf_wifi_hal_cfg_params *cfg_params,
 		  enum nrf_wifi_status (*intr_callbk_fn)(void *dev_ctx,
 							 void *event_data,
-							 unsigned int len))
+							 unsigned int len),
+		  enum nrf_wifi_status (*rpu_recovery_callbk_fn)(void *mac_ctx,
+							     void *event_data,
+							     unsigned int len))
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_hal_priv *hpriv = NULL;
@@ -1695,6 +1779,7 @@ nrf_wifi_hal_init(struct nrf_wifi_osal_priv *opriv,
 			      sizeof(hpriv->cfg_params));
 
 	hpriv->intr_callbk_fn = intr_callbk_fn;
+	hpriv->rpu_recovery_callbk_fn = rpu_recovery_callbk_fn;
 
 	status = pal_rpu_addr_offset_get(opriv,
 					 RPU_ADDR_PKTRAM_START,

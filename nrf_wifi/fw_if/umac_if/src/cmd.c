@@ -98,7 +98,8 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 				   unsigned int phy_calib,
 				   enum op_band op_band,
 				   bool beamforming,
-				   struct nrf_wifi_tx_pwr_ctrl_params *tx_pwr_ctrl_params)
+				   struct nrf_wifi_tx_pwr_ctrl_params *tx_pwr_ctrl_params,
+				   struct nrf_wifi_board_params *board_params)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct host_rpu_msg *umac_cmd = NULL;
@@ -148,6 +149,7 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 #ifdef CONFIG_NRF700X_TCP_IP_CHECKSUM_OFFLOAD
 	umac_cmd_data->tcp_ip_checksum_offload = 1;
 #endif /* CONFIG_NRF700X_TCP_IP_CHECKSUM_OFFLOAD */
+	umac_cmd_data->discon_timeout = CONFIG_NRF_WIFI_AP_DEAD_DETECT_TIMEOUT;
 
 	nrf_wifi_osal_log_dbg(fmac_dev_ctx->fpriv->opriv, "RPU LPM type: %s",
 		umac_cmd_data->sys_params.sleep_enable == 2 ? "HW" :
@@ -176,6 +178,11 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 	umac_cmd_data->op_band = op_band;
 
 	nrf_wifi_osal_mem_cpy(fmac_dev_ctx->fpriv->opriv,
+			      &umac_cmd_data->sys_params.rf_params[PCB_LOSS_BYTE_2G_OFST],
+			      &board_params->pcb_loss_2g,
+			      NUM_PCB_LOSS_OFFSET);
+
+	nrf_wifi_osal_mem_cpy(fmac_dev_ctx->fpriv->opriv,
 			      &umac_cmd_data->sys_params.rf_params[ANT_GAIN_2G_OFST],
 			      &tx_pwr_ctrl_params->ant_gain_2g,
 			      NUM_ANT_GAIN);
@@ -186,11 +193,6 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 			      NUM_EDGE_BACKOFF);
 
 	nrf_wifi_osal_mem_cpy(fmac_dev_ctx->fpriv->opriv,
-			      &umac_cmd_data->tx_pwr_ctrl_params,
-			      tx_pwr_ctrl_params,
-			      sizeof(umac_cmd_data->tx_pwr_ctrl_params));
-
-	nrf_wifi_osal_mem_cpy(fmac_dev_ctx->fpriv->opriv,
 			      umac_cmd_data->country_code,
 			      CONFIG_NRF700X_REG_DOMAIN,
 			      NRF_WIFI_COUNTRY_CODE_LEN);
@@ -198,7 +200,7 @@ enum nrf_wifi_status umac_cmd_init(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx,
 #ifdef CONFIG_NRF700X_RPU_EXTEND_TWT_SP
 	 umac_cmd_data->feature_flags |= TWT_EXTEND_SP_EDCA;
 #endif
-#ifdef CONFIG_NRF700X_SCAN_DISABLE_DFS_CHANNELS
+#ifdef CONFIG_WIFI_NRF700X_SCAN_DISABLE_DFS_CHANNELS
 	umac_cmd_data->feature_flags |= DISABLE_DFS_CHANNELS;
 #endif /* CONFIG_NRF700X_SCAN_DISABLE_DFS_CHANNELS */
 

@@ -213,7 +213,8 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 						  unsigned int phy_calib,
 						  enum op_band op_band,
 						  bool beamforming,
-						  struct nrf_wifi_tx_pwr_ctrl_params *tx_pwr_ctrl)
+						  struct nrf_wifi_tx_pwr_ctrl_params *tx_pwr_ctrl,
+						  struct nrf_wifi_board_params *board_params)
 {
 	unsigned long start_time_us = 0;
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
@@ -254,7 +255,8 @@ static enum nrf_wifi_status nrf_wifi_fmac_fw_init(struct nrf_wifi_fmac_dev_ctx *
 			       phy_calib,
 			       op_band,
 			       beamforming,
-			       tx_pwr_ctrl);
+			       tx_pwr_ctrl,
+			       board_params);
 
 	if (status != NRF_WIFI_STATUS_SUCCESS) {
 		nrf_wifi_osal_log_err(fmac_dev_ctx->fpriv->opriv,
@@ -355,7 +357,8 @@ enum nrf_wifi_status nrf_wifi_fmac_dev_init(struct nrf_wifi_fmac_dev_ctx *fmac_d
 					    enum op_band op_band,
 					    bool beamforming,
 					    struct nrf_wifi_tx_pwr_ctrl_params *tx_pwr_ctrl_params,
-					    struct nrf_wifi_tx_pwr_ceil_params *tx_pwr_ceil_params)
+					    struct nrf_wifi_tx_pwr_ceil_params *tx_pwr_ceil_params,
+					    struct nrf_wifi_board_params *board_params)
 {
 	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
 	struct nrf_wifi_fmac_otp_info otp_info;
@@ -418,7 +421,8 @@ enum nrf_wifi_status nrf_wifi_fmac_dev_init(struct nrf_wifi_fmac_dev_ctx *fmac_d
 				       phy_calib,
 				       op_band,
 				       beamforming,
-				       tx_pwr_ctrl_params);
+				       tx_pwr_ctrl_params,
+				       board_params);
 
 	if (status == NRF_WIFI_STATUS_FAIL) {
 		nrf_wifi_osal_log_err(fmac_dev_ctx->fpriv->opriv,
@@ -433,12 +437,55 @@ out:
 
 void nrf_wifi_fmac_dev_deinit(struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx)
 {
-	nrf_wifi_hal_lock_rx(fmac_dev_ctx->hal_dev_ctx);
+	nrf_wifi_hal_dev_deinit(fmac_dev_ctx->hal_dev_ctx);
 	nrf_wifi_fmac_fw_deinit(fmac_dev_ctx);
 	nrf_wifi_osal_mem_free(fmac_dev_ctx->fpriv->opriv,
 			       fmac_dev_ctx->tx_pwr_ceil_params);
-	nrf_wifi_hal_unlock_rx(fmac_dev_ctx->hal_dev_ctx);
 }
+
+#ifdef CONFIG_NRF_WIFI_RPU_RECOVERY
+enum nrf_wifi_status nrf_wifi_fmac_rpu_recovery_callback(void *mac_dev_ctx,
+						void *event_data,
+						unsigned int len)
+{
+	enum nrf_wifi_status status = NRF_WIFI_STATUS_FAIL;
+	struct nrf_wifi_fmac_dev_ctx *fmac_dev_ctx = NULL;
+	struct nrf_wifi_fmac_dev_ctx_def *def_dev_ctx = NULL;
+	struct nrf_wifi_fmac_priv *fpriv = NULL;
+	struct nrf_wifi_fmac_priv_def *def_priv = NULL;
+
+	fmac_dev_ctx = mac_dev_ctx;
+	if (!fmac_dev_ctx) {
+		goto out;
+	}
+
+	fpriv = fmac_dev_ctx->fpriv;
+	def_priv = wifi_fmac_priv(fpriv);
+
+	def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
+	if (!def_dev_ctx) {
+		nrf_wifi_osal_log_err(fpriv->opriv,
+				      "%s: Invalid device context",
+				      __func__);
+		goto out;
+	}
+
+	if (!def_priv->callbk_fns.rpu_recovery_callbk_fn) {
+		nrf_wifi_osal_log_err(fpriv->opriv,
+				      "%s: No RPU recovery callback function",
+				      __func__);
+		goto out;
+	}
+
+	/* Here we only care about FMAC, so, just use VIF0 */
+	def_priv->callbk_fns.rpu_recovery_callbk_fn(def_dev_ctx->vif_ctx[0],
+			event_data, len);
+
+	status = NRF_WIFI_STATUS_SUCCESS;
+out:
+	return status;
+}
+#endif /* CONFIG_NRF_WIFI_RPU_RECOVERY */
 
 struct nrf_wifi_fmac_priv *nrf_wifi_fmac_init(struct nrf_wifi_data_config_params *data_config,
 					      struct rx_buf_pool_params *rx_buf_pools,
@@ -525,7 +572,12 @@ struct nrf_wifi_fmac_priv *nrf_wifi_fmac_init(struct nrf_wifi_data_config_params
 
 	fpriv->hpriv = nrf_wifi_hal_init(opriv,
 					 &hal_cfg_params,
-					 &nrf_wifi_fmac_event_callback);
+					 &nrf_wifi_fmac_event_callback,
+#ifdef CONFIG_NRF_WIFI_RPU_RECOVERY
+					 &nrf_wifi_fmac_rpu_recovery_callback);
+#else
+					 NULL);
+#endif
 
 	if (!fpriv->hpriv) {
 		nrf_wifi_osal_log_err(opriv,
@@ -1982,6 +2034,16 @@ unsigned char nrf_wifi_fmac_add_vif(void *dev_ctx,
 	vif_ctx->if_type = vif_info->iftype;
 	vif_ctx->mode = NRF_WIFI_STA_MODE;
 
+	/**
+	 * Set initial packet filter setting to filter all.
+	 * subsequent calls to set packet filter will set
+	 * packet_filter settings to appropriate value as
+	 * desired by application.
+	 */
+#if defined(CONFIG_NRF700X_RAW_DATA_RX) || defined(CONFIG_NRF700X_PROMISC_DATA_RX)
+	vif_ctx->packet_filter = 1;
+#endif
+
 	nrf_wifi_osal_mem_cpy(fmac_dev_ctx->fpriv->opriv,
 			      vif_ctx->mac_addr,
 			      vif_info->mac_addr,
@@ -2207,6 +2269,10 @@ out:
 		struct nrf_wifi_fmac_dev_ctx_def *def_dev_ctx = NULL;
 
 		def_dev_ctx = wifi_dev_priv(fmac_dev_ctx);
+
+		nrf_wifi_fmac_vif_update_if_type(fmac_dev_ctx,
+						 if_idx,
+						 vif_info->iftype);
 
 		def_dev_ctx->vif_ctx[if_idx]->if_type = vif_info->iftype;
 	}

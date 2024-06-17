@@ -161,8 +161,6 @@ enum nrf_wifi_sys_commands {
 	NRF_WIFI_CMD_RAW_CONFIG_FILTER,
 	/** Command to configure packet injector mode or Raw Tx mode */
 	NRF_WIFI_CMD_RAW_TX_PKT,
-	/** Command to get extra RPU debug statistics */ 
-	NRF_WIFI_CMD_GET_DEBUG_STATS,
 };
 
 /**
@@ -194,8 +192,6 @@ enum nrf_wifi_sys_events {
 	NRF_WIFI_EVENT_FILTER_SET_DONE,
 	/** Tx done event for the Raw Tx */
 	NRF_WIFI_EVENT_RAW_TX_DONE,
-	/** Response to NRF_WIFI_CMD_GET_DEBUG_STATS */
-	NRF_WIFI_EVENT_DEBUG_STATS,
 };
 
 /**
@@ -634,6 +630,10 @@ struct rpu_lmac_stats {
 	unsigned int scan_abort_complete;
 	/** Number of internal buffer pool null counts */
 	unsigned int internal_buf_pool_null;
+	/** RPU hardware lockup event detection count */
+	unsigned int rpu_hw_lockup_count;
+	/** RPU hardware lockup recovery completed count */
+	unsigned int rpu_hw_lockup_recovery_done;
 } __NRF_WIFI_PKD;
 
 #endif /* !CONFIG_NRF700X_RADIO_TEST */
@@ -818,6 +818,21 @@ struct nrf_wifi_tx_pwr_ctrl_params {
 } __NRF_WIFI_PKD;
 
 /**
+ * @brief This structure defines board dependent parameters like PCB loss.
+ *
+ */
+struct nrf_wifi_board_params {
+	/** PCB loss for 2.4 GHz band */
+	unsigned char pcb_loss_2g;
+	/** PCB loss for 5 GHz band (5150 MHz - 5350 MHz) */
+	unsigned char pcb_loss_5g_band1;
+	/** PCB loss for 5 GHz band (5470 MHz - 5730 MHz) */
+	unsigned char pcb_loss_5g_band2;
+	/** PCB loss for 5 GHz band (5730 MHz - 5895 MHz) */
+	unsigned char pcb_loss_5g_band3;
+} __NRF_WIFI_PKD;
+
+/**
  * @brief This enum defines different types of operating bands.
  *
  */
@@ -860,8 +875,6 @@ struct nrf_wifi_cmd_sys_init {
 	unsigned char country_code[NRF_WIFI_COUNTRY_CODE_LEN];
 	/** Operating band see enum op_band */
 	unsigned int op_band;
-	/** System parameters provided for controlling the TX power */
-	struct nrf_wifi_tx_pwr_ctrl_params tx_pwr_ctrl_params;
 	/** Offload mgmt buffer refill to UMAC when enabled */
 	unsigned char mgmt_buff_offload;
 	/** Enable features from driver config */
@@ -870,6 +883,10 @@ struct nrf_wifi_cmd_sys_init {
 	 *  If a user wishes to turn it off, they should set this parameter to 1.
 	 */
 	unsigned int disable_beamforming;
+	/** The RPU uses this value (in seconds) to decide how long to wait
+	 *  without receiving beacons before disconnection.
+	 */
+	unsigned int discon_timeout;
 } __NRF_WIFI_PKD;
 
 /**
@@ -1172,7 +1189,7 @@ struct nrf_wifi_cmd_raw_config_filter {
 	/** Wireless device operating mode filters for Promiscuous/Monitor modes. */
 	unsigned char filter;
 	/** capture length. */
-	unsigned char capture_len;
+	unsigned short capture_len;
 } __NRF_WIFI_PKD;
 
 /**
@@ -1578,19 +1595,6 @@ struct umac_int_stats {
 struct nrf_wifi_event_deinit_done {
 	/** UMAC header, @ref nrf_wifi_sys_head */
 	struct nrf_wifi_sys_head sys_head;
-} __NRF_WIFI_PKD;
-
-/**
- * @brief This structure represents the event that provides RPU debug
- *  statistics in response to the NRF_WIFI_CMD_GET_DEBUG_STATS command.
- */
-struct nrf_wifi_umac_event_debug_stats {
-	/** UMAC header, @ref nrf_wifi_sys_head */
-	struct nrf_wifi_sys_head sys_head;
-	/** RPU hardware lockup event detection count */
-	unsigned int rpu_hw_lockup_count;
-	/** RPU hardware lockup recovery completed count */
-	unsigned int rpu_hw_lockup_recovery_done;
 } __NRF_WIFI_PKD;
 
 #endif /* __HOST_RPU_SYS_IF_H__ */

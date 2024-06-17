@@ -98,6 +98,12 @@ static int nrf_wifi_patch_feature_flags_compat(struct nrf_wifi_fmac_dev_ctx *fma
 			"System mode feature flag not set");
 		return -1;
 	}
+#elif defined(CONFIG_NRF700X_SYSTEM_WITH_RAW_MODES)
+	if (!(feature_flags & NRF70_FEAT_SYSTEM_WITH_RAW_MODES)) {
+		nrf_wifi_osal_log_err(fmac_dev_ctx->fpriv->opriv,
+			"System with raw modes feature flag not set");
+		return -1;
+	}
 #else
 	nrf_wifi_osal_log_err(fmac_dev_ctx->fpriv->opriv,
 		"Invalid feature flags: 0x%x or build configuration",
@@ -710,24 +716,33 @@ enum nrf_wifi_status nrf_wifi_fmac_rf_params_get(
 		backoff_5g_highband = FT_PROG_VER3_5G_HIGH_OFDM_TXCEIL_BKOFF;
 	}
 	phy_rf_params->max_pwr_ceil.max_dsss_pwr =
-	tx_pwr_ceil_params->max_pwr_2g_dsss - backoff_2g_dsss;
+	MIN(tx_pwr_ceil_params->max_pwr_2g_dsss, phy_rf_params->max_pwr_ceil.max_dsss_pwr)
+       	- backoff_2g_dsss;
 	phy_rf_params->max_pwr_ceil.max_lb_mcs7_pwr =
-	tx_pwr_ceil_params->max_pwr_2g_mcs7 - backoff_2g_ofdm;
+	MIN(tx_pwr_ceil_params->max_pwr_2g_mcs7, phy_rf_params->max_pwr_ceil.max_lb_mcs7_pwr)
+       	- backoff_2g_ofdm;
 	phy_rf_params->max_pwr_ceil.max_lb_mcs0_pwr =
-	tx_pwr_ceil_params->max_pwr_2g_mcs0 - backoff_2g_ofdm;
-	phy_rf_params->max_pwr_ceil.max_hb_low_chan_mcs7_pwr =
+	MIN(tx_pwr_ceil_params->max_pwr_2g_mcs0, phy_rf_params->max_pwr_ceil.max_lb_mcs0_pwr)
+       	- backoff_2g_ofdm;
 #ifndef CONFIG_NRF70_2_4G_ONLY
-	tx_pwr_ceil_params->max_pwr_5g_low_mcs7 - backoff_5g_lowband;
+	phy_rf_params->max_pwr_ceil.max_hb_low_chan_mcs7_pwr =
+	MIN(tx_pwr_ceil_params->max_pwr_5g_low_mcs7, 
+		phy_rf_params->max_pwr_ceil.max_hb_low_chan_mcs7_pwr) - backoff_5g_lowband;
 	phy_rf_params->max_pwr_ceil.max_hb_mid_chan_mcs7_pwr =
-	tx_pwr_ceil_params->max_pwr_5g_mid_mcs7 - backoff_5g_midband;
+	MIN(tx_pwr_ceil_params->max_pwr_5g_mid_mcs7,
+		phy_rf_params->max_pwr_ceil.max_hb_mid_chan_mcs7_pwr) - backoff_5g_midband;
 	phy_rf_params->max_pwr_ceil.max_hb_high_chan_mcs7_pwr =
-	tx_pwr_ceil_params->max_pwr_5g_high_mcs7 - backoff_5g_highband;
+	MIN(tx_pwr_ceil_params->max_pwr_5g_high_mcs7,
+		phy_rf_params->max_pwr_ceil.max_hb_high_chan_mcs7_pwr) - backoff_5g_highband;
 	phy_rf_params->max_pwr_ceil.max_hb_low_chan_mcs0_pwr =
-	tx_pwr_ceil_params->max_pwr_5g_low_mcs0 - backoff_5g_lowband;
+	MIN(tx_pwr_ceil_params->max_pwr_5g_low_mcs0,
+		phy_rf_params->max_pwr_ceil.max_hb_low_chan_mcs0_pwr) - backoff_5g_lowband;
 	phy_rf_params->max_pwr_ceil.max_hb_mid_chan_mcs0_pwr =
-	tx_pwr_ceil_params->max_pwr_5g_mid_mcs0 - backoff_5g_midband;
+	MIN(tx_pwr_ceil_params->max_pwr_5g_mid_mcs0,
+	        phy_rf_params->max_pwr_ceil.max_hb_mid_chan_mcs0_pwr) - backoff_5g_midband;
 	phy_rf_params->max_pwr_ceil.max_hb_high_chan_mcs0_pwr =
-	tx_pwr_ceil_params->max_pwr_5g_high_mcs0 - backoff_5g_highband;
+	MIN(tx_pwr_ceil_params->max_pwr_5g_high_mcs0,
+	        phy_rf_params->max_pwr_ceil.max_hb_high_chan_mcs0_pwr) - backoff_5g_highband;
 #endif /* CONFIG_NRF70_2_4G_ONLY */
 
 	status = NRF_WIFI_STATUS_SUCCESS;
@@ -1077,6 +1092,10 @@ int nrf_wifi_phy_rf_params_init(struct nrf_wifi_osal_priv *opriv,
 	prf->phy_params[rf_param_offset + 27]  = CONFIG_NRF700X_ANT_GAIN_5G_BAND1;
 	prf->phy_params[rf_param_offset + 28]  = CONFIG_NRF700X_ANT_GAIN_5G_BAND2;
 	prf->phy_params[rf_param_offset + 29]  = CONFIG_NRF700X_ANT_GAIN_5G_BAND3;
+	prf->phy_params[rf_param_offset + 30]  = CONFIG_NRF700X_PCB_LOSS_2G;
+	prf->phy_params[rf_param_offset + 31]  = CONFIG_NRF700X_PCB_LOSS_5G_BAND1;
+	prf->phy_params[rf_param_offset + 32]  = CONFIG_NRF700X_PCB_LOSS_5G_BAND2;
+	prf->phy_params[rf_param_offset + 33]  = CONFIG_NRF700X_PCB_LOSS_5G_BAND3;
 
 	return(ret);
 }
@@ -1151,6 +1170,7 @@ out:
 #endif /* CONFIG_NRF_WIFI_LOW_POWER */
 #endif /* CONFIG_NRF700X_UTIL */
 
+#ifdef CONFIG_NRF700X_SYSTEM_WITH_RAW_MODES
 enum nrf_wifi_status nrf_wifi_fmac_set_mode(void *dev_ctx,
 					    unsigned char if_idx,
 					    unsigned char mode)
@@ -1192,6 +1212,7 @@ enum nrf_wifi_status nrf_wifi_fmac_set_mode(void *dev_ctx,
 out:
 	return status;
 }
+#endif
 
 #if defined(CONFIG_NRF700X_RAW_DATA_TX) || defined(CONFIG_NRF700X_RAW_DATA_RX)
 enum nrf_wifi_status nrf_wifi_fmac_set_channel(void *dev_ctx,

@@ -39,7 +39,7 @@ doc/*                                     @b-gent
 /gzll/                                    @leewkb4567
 /mpsl/                                    @nrfconnect/ncs-dragoon
 /nfc/                                     @anangl @grochu @KAGA164
-/nrf_802154/                              @ankuns @jciupis @ahasztag
+/nrf_802154/                              @ankuns @piotrkoziar
 /nrf_security/                            @frkv @tejlmand
 /openthread/                              @lmaciejonczyk @edmont @canisLupus1313
 /zboss/                                   @milewr
@@ -49,5 +49,6 @@ doc/*                                     @b-gent
 /lc3/                                     @koffes @alexsven
 /nrf_fuel_gauge/                          @nordic-auko @aasinclair
 /nrf_wifi/                                @krish2718 @sachinthegreen @rado17 @rlubos
+/nrf_wifi/fw_bins/                        @udaynordic @rajb9 @srkanordic
 /nrf_wifi/fw_if/umac_if/inc/fw/           @udaynordic @rajb9 @srkanordic
 /nrf_wifi/hw_if/hal/inc/fw/               @udaynordic @rajb9 @srkanordic

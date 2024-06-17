@@ -29,6 +29,8 @@
 
 #include <patch_info.h>
 
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 /**
  * @brief Adds a RPU instance.
  * @param fpriv Pointer to the context of the UMAC IF layer.
@@ -305,6 +307,7 @@ int nrf_wifi_phy_rf_params_init(struct nrf_wifi_osal_priv *opriv,
 				unsigned int package_info,
 				unsigned char *str);
 
+#ifdef CONFIG_NRF700X_SYSTEM_WITH_RAW_MODES
 /**
  * @brief Set the current mode of operation
  * @param dev_ctx Pointer to the UMAC IF context for a RPU WLAN device.
@@ -320,6 +323,7 @@ int nrf_wifi_phy_rf_params_init(struct nrf_wifi_osal_priv *opriv,
 enum nrf_wifi_status nrf_wifi_fmac_set_mode(void *dev_ctx,
 					    unsigned char if_idx,
 					    unsigned char mode);
+#endif
 
 #if defined(CONFIG_NRF700X_RAW_DATA_TX) || defined(CONFIG_NRF700X_RAW_DATA_RX)
 /**
@@ -340,7 +344,7 @@ enum nrf_wifi_status nrf_wifi_fmac_set_channel(void *dev_ctx,
 
 #endif /* CONFIG_NRF700X_RAW_DATA_TX || CONFIG_NRF700X_RAW_DATA_RX */
 
-#if defined(CONFIG_NRF700X_RAW_DATA_RX) || (CONFIG_NRF700X_PROMISC_DATA_RX)
+#if defined(CONFIG_NRF700X_RAW_DATA_RX) || defined(CONFIG_NRF700X_PROMISC_DATA_RX)
 /**
  * @brief Set packet filter settings
  * @param dev_ctx Pointer to the UMAC IF context for a RPU WLAN device.

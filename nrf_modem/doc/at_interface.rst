@@ -1,16 +1,13 @@
 .. _nrf_modem_at:
 
-AT interface
+AT commands
 ############
 
 .. contents::
    :local:
    :depth: 2
 
-The Modem library supports sending AT commands to the modem, reading responses, and receiving AT notifications using the :ref:`nrf_modem_at_api` found in :file:`nrfxlib/nrf_modem/include/nrf_modem_at.h`.
-
-AT commands
-***********
+The AT interface in the Modem library is used to send AT commands to the cellular modem, read AT command responses, and receive AT notifications.
 
 AT commands are essentially a set of modem instructions that are used to configure the modem, establish a network connection (or in general, execute operations), and retrieve modem and connection status information.
 For the full set of supported AT commands, see the `nRF91x1 AT Commands Reference Guide`_  or `nRF9160 AT Commands Reference Guide`_ depending on the SiP you are using.
@@ -311,6 +308,10 @@ The following snippet shows how to set up and use a custom AT command:
 .. note::
    The filter uses the callback of the first match found in the filter list.
    Hence, make sure to keep the filters accurately or order them accordingly.
+
+.. note::
+   The custom AT command filter is compared against the start of the AT command string sent to the Modem library.
+   Therefore, you must make sure to remove any leading whitespace characters in the AT command string before calling the :c:func:`nrf_modem_at_cmd` function.
 
 Receiving AT notifications
 **************************

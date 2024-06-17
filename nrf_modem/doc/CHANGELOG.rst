@@ -9,6 +9,47 @@ Changelog
 
 All notable changes to this project are documented in this file.
 
+nrf_modem
+*********
+
+The library is now released in two variants, with different feature sets and support for different variants of the nRF91 Series firmware.
+
+* The cellular variant, with support for cellular firmware.
+* The DECT PHY variant, with support for DECT NR+ PHY firmware.
+
+Core library
+============
+
+* Updated:
+
+  * The minimum requirement for the ``NRF_MODEM_SHMEM_BOOTLOADER_SIZE`` from ``0x201c`` to ``0x2018``.
+  * The modem trace functionality to support future modem firmwares.
+
+AT interface
+============
+
+* Added the :c:member:`nrf_modem_at_cmd_custom.cmd_strlen` field to hold the AT filter length.
+* The custom AT command filters now use the longest AT filter match.
+  This allows to have for example filters for both ``AT#XSOCKET`` and ``AT#XSOCKETOPTION``.
+
+DECT NR+
+========
+
+* Added new :ref:`interface <nrf_modem_dect_phy>` for the DECT NR+ PHY firmware.
+
+
+nrf_modem 2.6.1
+***************
+
+Sockets
+=======
+
+* Fixed a bug where the :c:func:`nrf_recv` and :c:func:`nrf_recvfrom` functions erroneously returned ``-1`` and set ``errno`` to ``NRF_EAGAIN`` instead of returning ``0`` when these three conditions were met:
+
+  * The :c:func:`nrf_recv` and :c:func:`nrf_recvfrom` functions were called with the :c:macro:`NRF_MSG_DONTWAIT` flag or when the socket is non-blocking (``NRF_O_NONBLOCK`` is set on the socket).
+  * The socket was closed by the server.
+  * There was no more data to read (End Of File (EOF)).
+
 nrf_modem 2.6.0
 ***************
 
