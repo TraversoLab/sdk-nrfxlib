@@ -133,6 +133,9 @@ extern "C" {
 /** @brief Default ISO TX PDU buffer per stream count. */
 #define SDC_DEFAULT_ISO_TX_PDU_BUFFER_PER_STREAM_COUNT 0
 
+/** @brief Default maximum number of concurrent connections supporting CS procedure */
+#define SDC_DEFAULT_CS_COUNT 0
+
 /** @brief Size of build revision array in bytes. */
 #define SDC_BUILD_REVISION_SIZE 20
 
@@ -148,9 +151,9 @@ extern "C" {
  */
 
 /** @brief Auxiliary defines, not to be used outside of this file. */
-#define __MEM_MINIMAL_CENTRAL_LINK_SIZE 1043
-#define __MEM_MINIMAL_PERIPHERAL_LINK_SIZE 1164
-#define __MEM_TX_BUFFER_OVERHEAD_SIZE 15
+#define __MEM_MINIMAL_CENTRAL_LINK_SIZE 811
+#define __MEM_MINIMAL_PERIPHERAL_LINK_SIZE 915
+#define __MEM_TX_BUFFER_OVERHEAD_SIZE 14
 #define __MEM_RX_BUFFER_OVERHEAD_SIZE 14
 
 #define __MEM_ADDITIONAL_LINK_SIZE(tx_size, rx_size, tx_count, rx_count) \
@@ -191,28 +194,40 @@ extern "C" {
  *
  * @param[in] num_links Total number of peripheral and central links supported.
  */
-#define SDC_MEM_LE_POWER_CONTROL(num_links) ((num_links) > 0 ? (12 + (num_links) * 26) : 0)
+#define SDC_MEM_LE_POWER_CONTROL(num_links) ((num_links) > 0 ? (13 + (num_links) * 115) : 0)
+
+/** @brief Maximum memory required when supporting subrating.
+ *
+ * @param[in] num_links Total number of peripheral and central links supported.
+ */
+#define SDC_MEM_SUBRATING(num_links) (11 + (num_links) * 19)
+
+/** @brief Maximum memory required when supporting periodic advertising sync transfer.
+ *
+ * @param[in] num_links Total number of peripheral and central links supported.
+ */
+#define SDC_MEM_SYNC_TRANSFER(num_links) ((num_links) > 0 ? (13 + (num_links) * 139) : 0)
 
 /** Memory required for Quality of Service (QoS) channel survey module. */
 #define SDC_MEM_QOS_CHANNEL_SURVEY (40)
 
 /** Memory required for the scanner when only supporting legacy scanning. */
-#define SDC_MEM_SCAN(buffer_count) (340 + (buffer_count) * 96)
+#define SDC_MEM_SCAN(buffer_count) (345 + (buffer_count) * 98)
 
 /** Memory required for the scanner when supporting extended scanning. */
-#define SDC_MEM_SCAN_EXT(buffer_count) (340 + (buffer_count) * 312)
+#define SDC_MEM_SCAN_EXT(buffer_count) (345 + (buffer_count) * 320)
 
 /** Additional memory required for the initiator when supporting scanning
  *  and initiating at the same time.
  */
-#define SDC_MEM_INITIATOR (312)
+#define SDC_MEM_INITIATOR (320)
 
 /** Memory required for the Filter Accept List */
 #define SDC_MEM_FAL(max_num_entries) ((max_num_entries) > 0 ? (4 + (max_num_entries) * 8) : 0)
 
 /** @brief Auxiliary defines, not to be used outside of this file. */
-#define __MEM_PER_ADV_SET_LOW(max_adv_data) ((4833+(max_adv_data)*18)/10)
-#define __MEM_PER_ADV_SET_HIGH(max_adv_data) (671+(max_adv_data))
+#define __MEM_PER_ADV_SET_LOW(max_adv_data) ((4912+(max_adv_data)*18)/10)
+#define __MEM_PER_ADV_SET_HIGH(max_adv_data) (679+(max_adv_data))
 #define __MEM_PER_PERIODIC_ADV_SET_LOW(max_adv_data) ((2658+(max_adv_data)*18)/10)
 #define __MEM_PER_PERIODIC_ADV_SET_HIGH(max_adv_data) (457+(max_adv_data))
 
@@ -238,7 +253,7 @@ extern "C" {
  *
  * @param[in] buffer_count The number of periodic synchronization receive buffers.
  */
-#define SDC_MEM_PER_PERIODIC_SYNC(buffer_count) (221 + (buffer_count) * 279)
+#define SDC_MEM_PER_PERIODIC_SYNC(buffer_count) (218 + (buffer_count) * 279)
 
 /** Memory required per periodic sync when periodic sync with responses is supported.
  *
@@ -246,7 +261,7 @@ extern "C" {
  * @param[in] rx_buffer_count The number of buffers for receiving data.
  */
 #define SDC_MEM_PER_PERIODIC_SYNC_RSP(tx_buffer_count, rx_buffer_count) \
-    (650 + (tx_buffer_count - 1) * 257 + (rx_buffer_count) * 278)
+    (639 + (tx_buffer_count - 1) * 254 + (rx_buffer_count) * 278)
 
 /** Memory required for the periodic adv list.
  *
@@ -265,7 +280,7 @@ extern "C" {
 
 /** Memory required per periodic advertising with responses set.
  *
- * @param[in] max_adv_data The maximum size of data whcih can be sent in chains.
+ * @param[in] max_adv_data The maximum size of data which can be sent in chains.
  * @param[in] tx_buffer_count The number of buffers for sending data. Minimum of 1.
  * @param[in] rx_buffer_count The number of buffers for receiving data.
  * @param[in] max_tx_data_size The maximum size of data which can be sent in subevents.
@@ -317,6 +332,18 @@ extern "C" {
  * @param[in] count Number of shared SDUs allocated for the TX path.
  * @param[in] size  Maximum size of SDUs being used. */
 #define SDC_MEM_ISO_TX_SDU_POOL_SIZE(count, size) ((count) > 0 ? (12 + (count) * ((size) + 49)) : 0)
+
+/** @brief Maximum additional memory required to support Channel Sounding
+ *
+ * @param[in] count Maximum number of concurrent connections supporting CS procedure.
+ */
+#define SDC_MEM_CS(count) ((count) > 0 ? (13 + (count)*7371) : 0)
+
+/** @brief Maximum additional memory required to support Channel Sounding setup phase procedures
+ *
+ * @param[in] count Total number of links (central + peripheral).
+ */
+#define SDC_MEM_CS_SETUP_PHASE_LINKS(count) ((count) > 0 ? (11 + (count)*315) : 0)
 
 /** @} end of sdc_mem_defines */
 
@@ -385,6 +412,8 @@ enum sdc_cfg_type
     SDC_CFG_TYPE_BIS_SOURCE_COUNT,
     /** See @ref sdc_cfg_t::iso_buffer_cfg. */
     SDC_CFG_TYPE_ISO_BUFFER_CFG,
+    /** See @ref sdc_cfg_t::cs_count. */
+    SDC_CFG_TYPE_CS_COUNT,
 };
 
 
@@ -628,6 +657,11 @@ typedef union
      * Default: See @ref sdc_cfg_iso_buffer_cfg_t.
      */
     sdc_cfg_iso_buffer_cfg_t iso_buffer_cfg;
+    /** Configures the maximum number of concurrent connections supporting CS procedure.
+     *
+     * Default: @ref SDC_DEFAULT_CS_COUNT.
+     */
+    sdc_cfg_role_count_t cs_count;
 } sdc_cfg_t;
 
 
@@ -1006,7 +1040,7 @@ int32_t sdc_support_le_periodic_sync_with_rsp(void);
 /** @brief Support LE Power Control for central role
  *
  * After this API is called, the controller will support the HCI commands
- * related to the LE Power Control.
+ * related to LE Power Control.
  *
  * @note The application is required to call both @ref sdc_support_le_power_control_central() and @ref sdc_support_le_power_control_peripheral()
  *       if both central and peripheral roles are supported.
@@ -1020,7 +1054,7 @@ int32_t sdc_support_le_power_control_central(void);
 /** @brief Support LE Power Control for peripheral role
  *
  * After this API is called, the controller will support the HCI commands
- * related to the LE Power Control.
+ * related to LE Power Control.
  *
  * @note The application is required to call both @ref sdc_support_le_power_control_central() and @ref sdc_support_le_power_control_peripheral()
  *       if both central and peripheral roles are supported.
@@ -1030,6 +1064,20 @@ int32_t sdc_support_le_power_control_central(void);
  * @retval -NRF_EOPNOTSUPP  LE Power Control is not supported.
  */
 int32_t sdc_support_le_power_control_peripheral(void);
+
+/** @brief Support LE Path Loss Monitoring
+ *
+ * After this API is called, the controller will support the HCI commands
+ * related to LE Path Loss Monitoring.
+ *
+ * @note The application is required to call at least one of @ref sdc_support_le_power_control_central()
+ *       and @ref sdc_support_le_power_control_peripheral() before enabling support for LE Path Loss Monitoring.
+ *
+ * @retval 0                Success
+ * @retval -NRF_EPERM       This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP  LE Path Loss Monitoring is not supported.
+ */
+int32_t sdc_support_le_path_loss_monitoring(void);
 
 /** @brief Support Sleep Clock Accuracy (SCA) Update procedure for central role
  *
@@ -1191,25 +1239,6 @@ int32_t sdc_iso_host_timestamps_ignore(bool ignore);
  */
 int32_t sdc_support_qos_channel_survey(void);
 
-/** @brief Configure the coex advertising mode
- *
- * Configure how the advertiser behaves on denial of an advertising packet.
- * The advertiser can be configured to carry on with the advertisement after the denial or
- * to abort the advertising event, once an advertising packet gets denied.
- *
- * The default behavior is that the advertiser tries to carry on with the advertising event
- * after the denial.
- *
- * @note Setting @p adv_cont_on_denial to True is not supported for the
- *       @ref MPSL_COEX_1WIRE_GPIOTE_ID coex interface type.
- *       Using the @ref MPSL_COEX_1WIRE_GPIOTE_ID coex interface without using this
- *       API call with @p adv_cont_on_denial set to False will result in unexpected behavior.
- *
- * @retval 0                Success
- * @retval -NRF_EOPNOTSUPP  The coexistence feature is not supported.
- */
-int32_t sdc_coex_adv_mode_configure(bool adv_cont_on_denial);
-
 /** @brief Support for setting the default radio TX power level
  *
  * This API sets the default power level for radio TX activity in the controller.
@@ -1257,6 +1286,31 @@ int32_t sdc_support_connection_subrating_central(void);
  * @retval -NRF_EOPNOTSUPP  Connection Subrating is not supported.
  */
 int32_t sdc_support_connection_subrating_peripheral(void);
+
+/** @brief Support Channel Sounding test command
+ *
+ * After this API is called, the controller will support the HCI command
+ * HCI LE Channel Sounding Test
+ *
+ * @retval 0                Success
+ * @retval -NRF_EPERM       This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP  Channel Sounding Test is not supported
+ */
+int32_t sdc_support_channel_sounding_test(void);
+
+/** @brief Support LE Channel Sounding
+ *
+ * After this API is called, the controller will support the HCI command
+ * related to Channel Sounding.
+ *
+ * The application shall call @ref sdc_support_channel_sounding_test() to enable
+ * support for Channel Sounding test command.
+ *
+ * @retval 0                Success
+ * @retval -NRF_EPERM       This API must be called before @ref sdc_cfg_set() or @ref sdc_enable().
+ * @retval -NRF_EOPNOTSUPP  Channel Sounding is not supported
+ */
+int32_t sdc_support_channel_sounding(void);
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,7 @@ To configure PDP contexts and activate PDN connections, the application must use
 When performing network operations on any PDN, the application ensures that the PDN connection is available.
 For more information about how to configure PDP contexts, activate PDN connections, and determine their state, see the `Packet domain commands`_ section in the nRF9160 AT Commands Reference Guide or the same section in the `nRF91x1 AT Commands Reference Guide`_ depending on the SiP you are using.
 
-Alternatively, the :ref:`pdn_readme` library in |NCS| can be used to receive events on PDN connectivity and manage packet data networks.
+Alternatively, the :ref:`nrf:pdn_readme` library in |NCS| can be used to receive events on PDN connectivity and manage packet data networks.
 
 
 Configuring a socket to use a PDN
@@ -54,9 +54,18 @@ Handling PDN errors on sockets
 ******************************
 
 During operation, an active PDN connection may be deactivated due to loss of connectivity or other reasons.
+
+The following applies to sockets that have set the :c:macro:`NRF_SO_KEEPOPEN` socket option:
+
+The loss of an active PDN connection will not result in errors.
+Socket operations can return errors due to lack of PDN connectivity.
+Upon PDN reactivation, the socket is functional and can resume its operations.
+The application is responsible for detecting and re-attempting operations that fail while the socket does not have an active PDN.
+
+The following applies to sockets that have not set the :c:macro:`NRF_SO_KEEPOPEN` socket option:
+
 When a socket operation is attempted on a socket that no longer has an active PDN connection, the operation will return ``-1`` and set ``errno`` to ``NRF_ENETDOWN``.
 If the socket is being polled, the :c:func:`nrf_poll` function will set the ``POLLERR`` flag and set the socket error to ``NRF_ENETDOWN``.
 The socket error can be retrieved using the :c:macro:`NRF_SO_ERROR` socket option.
-
 When the ``NRF_ENETDOWN`` error is detected, the socket is no longer usable and must be closed by the application.
 The application is responsible for detecting when the PDN connection is activated again, before re-creating the socket and attempting the failed operation again.

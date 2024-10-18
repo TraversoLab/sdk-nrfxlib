@@ -75,7 +75,10 @@ typedef struct
         /** Parameters when type is @ref MPSL_FEM_EVENT_TYPE_TIMER. */
         struct
         {
-            /** Pointer to a 1-us resolution timer instance. */
+            /** Pointer to a 1-us resolution timer instance.
+             *
+             * For nRF54L series devices this timer must belong to a Radio Power Domain.
+             */
             NRF_TIMER_Type *   p_timer_instance;
 
             /** Counter period parameters */
@@ -96,7 +99,11 @@ typedef struct
         /** Parameters when type is @ref MPSL_FEM_EVENT_TYPE_GENERIC. */
         struct
         {
-            /** Event triggering required FEM operation. */
+            /** Event triggering required FEM operation.
+             *
+             *  For nRF54L series devices this event (being in fact a dppi channel number,
+             *  see doc for @c mpsl_subscribable_hw_event_t ) must belong to the Radio Power Domain.
+             */
             mpsl_subscribable_hw_event_t event;
           /** Generic event, used in case of type equal to @ref MPSL_FEM_EVENT_TYPE_GENERIC. */
         } generic;
@@ -152,6 +159,17 @@ typedef struct
  *  @param[out] p_caps  Pointer to the capabilities structure to be filled in.
  */
 void mpsl_fem_caps_get(mpsl_fem_caps_t * p_caps);
+
+/** @brief Enable Front End Module.
+ *
+ *  Some Front End Module devices should be explicitly enabled before they can be configured
+ *  for radio operation. This function is intended to enable Front End Module shortly before
+ *  radio operations are started.
+ * 
+ *  After the Front End Module performed all it's operations complementary @ref mpsl_fem_disable
+ *  function should be called.
+ */
+void mpsl_fem_enable(void);
 
 /** @brief Disable Front End Module.
  *

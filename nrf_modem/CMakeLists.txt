@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: LicenseRef-Nordic-5-Clause
 #
 
-if(CONFIG_NRF_MODEM_LINK_BINARY_CELLULAR OR CONFIG_NRF_MODEM_LINK_BINARY_DECT_PHY)
+if(CONFIG_NRF_MODEM_LINK_BINARY)
 
   cmake_path(SET lib_path ${CMAKE_CURRENT_SOURCE_DIR})
   cmake_path(APPEND lib_path lib)
@@ -21,6 +21,8 @@ if(CONFIG_NRF_MODEM_LINK_BINARY_CELLULAR OR CONFIG_NRF_MODEM_LINK_BINARY_DECT_PH
     cmake_path(APPEND lib_path nrf9160)
   elseif(CONFIG_SOC_NRF9120)
     cmake_path(APPEND lib_path nrf9120)
+  elseif(CONFIG_SOC_NRF9230_ENGB_CPUAPP)
+    cmake_path(APPEND lib_path nrf9230)
   else()
     assert(0 "Unsupported SOC. Got '${CONFIG_SOC}'")
   endif()
@@ -54,6 +56,8 @@ if(CONFIG_NRF_MODEM_LINK_BINARY_CELLULAR OR CONFIG_NRF_MODEM_LINK_BINARY_DECT_PH
 
   zephyr_include_directories(include)
 
-  target_sources(app PRIVATE shmem.c)
+  if(CONFIG_SOC_NRF9160 OR CONFIG_SOC_NRF9120)
+    target_sources(app PRIVATE shmem.c)
+  endif()
 
 endif()

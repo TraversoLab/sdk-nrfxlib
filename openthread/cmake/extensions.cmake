@@ -7,6 +7,8 @@
 # The Build the path of the library taking in nrf_security backend type,
 # OpenThread version and feature set
 function(openthread_calculate_lib_path ot_version lib_path)
+  set(OPENTHREAD_LIB_BASE_DIR "${ZEPHYR_NRFXLIB_MODULE_DIR}/openthread")
+
   if(CONFIG_OPENTHREAD_NORDIC_LIBRARY_MASTER)
     set(ot_feature_set "master")
   elseif(CONFIG_OPENTHREAD_NORDIC_LIBRARY_FTD)
@@ -19,14 +21,15 @@ function(openthread_calculate_lib_path ot_version lib_path)
     set(ot_feature_set "custom")
   endif()
 
-  nrfxlib_calculate_lib_path(nrfxlib_path)
+  nrfxlib_calculate_lib_path(nrfxlib_path BASE_DIR ${OPENTHREAD_LIB_BASE_DIR} SOFT_FLOAT_FALLBACK SOC_MODE)
+
   if(CONFIG_OPENTHREAD_COPROCESSOR_RCP)
     set(${lib_path}
-      "${ZEPHYR_NRFXLIB_MODULE_DIR}/openthread/${nrfxlib_path}/${ot_version}/rcp"
+      "${nrfxlib_path}/${ot_version}/rcp"
       PARENT_SCOPE)
   else()
     set(${lib_path}
-      "${ZEPHYR_NRFXLIB_MODULE_DIR}/openthread/${nrfxlib_path}/${ot_version}/${ot_feature_set}/${nrf_security_backend}"
+      "${nrfxlib_path}/${ot_version}/${ot_feature_set}/${nrf_security_backend}"
       PARENT_SCOPE)
   endif()
 
@@ -53,7 +56,7 @@ endmacro()
 
 # Store the configuration of the compiled OpenThread libraries
 # and set source and destination paths.
-function(openthread_libs_configuration_write CONFIG_FILE)
+function(openthread_libs_configuration_write CONFIG_FILE NRFXLIB_RELEASE_TAG)
   # Store all OT related variables
   get_cmake_property(_variableNames VARIABLES)
   foreach (_variableName ${_variableNames})
@@ -74,6 +77,8 @@ function(openthread_libs_configuration_write CONFIG_FILE)
 
     get_git_decribe(${ZEPHYR_OPENTHREAD_MODULE_DIR})
     list(INSERT OPENTHREAD_SETTINGS 0 "OpenThread_commit=${git_describe}")
+
+    list(INSERT OPENTHREAD_SETTINGS 0 "NRFXLIB_RELEASE_TAG=${NRFXLIB_RELEASE_TAG}\n")
   endif()
 
   # Store compiler and Zephyr SDK version
@@ -98,7 +103,11 @@ function(get_active_mbedtls_configs_from_file fileName returnMatch1List)
 endfunction()
 
 function(check_openthread_dependencies ot_lib_nrf_security_mbedtls_config_file)
-  set(nrf_security_mbedtls_config_file "${CMAKE_CURRENT_BINARY_DIR}/../../../nrf/subsys/nrf_security/src/include/generated/${CONFIG_MBEDTLS_CFG_FILE}")
+  if (CONFIG_BUILD_WITH_TFM)
+    set(nrf_security_mbedtls_config_file ${CMAKE_CURRENT_BINARY_DIR}/../../../../generated/interface_nrf_security_psa/${CONFIG_MBEDTLS_CFG_FILE})
+  else()
+    set(nrf_security_mbedtls_config_file ${CMAKE_CURRENT_BINARY_DIR}/../../../../generated/library_nrf_security_psa/${CONFIG_MBEDTLS_CFG_FILE})
+  endif()
   get_active_mbedtls_configs_from_file(${nrf_security_mbedtls_config_file} mbedtls_conf_list)
   get_active_mbedtls_configs_from_file(${ot_lib_nrf_security_mbedtls_config_file} ot_mbedtls_conf_list)
 
@@ -138,6 +147,14 @@ macro(get_openthread_libraries ot_libs)
 
   if(CONFIG_OPENTHREAD_SHELL)
     list(APPEND ${ot_libs} ${CLI_LIBRARIES})
+  endif()
+
+  if(CONFIG_OPENTHREAD_TCP_ENABLE)
+    if(CONFIG_OPENTHREAD_FTD)
+      list(APPEND ${ot_libs} tcplp-ftd)
+    elseif(CONFIG_OPENTHREAD_MTD)
+      list(APPEND ${ot_libs} tcplp-mtd)
+    endif()
   endif()
 
   if(CONFIG_OPENTHREAD_COPROCESSOR_RCP)

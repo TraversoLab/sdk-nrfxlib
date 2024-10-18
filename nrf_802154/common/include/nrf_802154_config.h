@@ -402,7 +402,7 @@ extern "C" {
  *
  */
 #ifndef NRF_802154_MAX_ACK_IE_SIZE
-#define NRF_802154_MAX_ACK_IE_SIZE 8
+#define NRF_802154_MAX_ACK_IE_SIZE 16
 #endif
 
 /**
@@ -503,8 +503,8 @@ extern "C" {
  *
  * Enables ECB peripheral to be used as hardware accelerator for on-the-fly AES-CCM* encryption.
  */
-#ifndef NRF_802154_ENCRYPTION_ACCELERATOR_ECB
-#if defined(NRF52_SERIES) || defined(NRF5340_XXAA)
+#if !defined(NRF_802154_ENCRYPTION_ACCELERATOR_ECB) || defined(__DOXYGEN__)
+#if defined(NRF52_SERIES) || defined(NRF5340_XXAA) || defined(__DOXYGEN__)
 #define NRF_802154_ENCRYPTION_ACCELERATOR_ECB 1
 #elif defined(NRF54H_SERIES) || defined(NRF54L_SERIES)
 #define NRF_802154_ENCRYPTION_ACCELERATOR_ECB 0
@@ -537,6 +537,64 @@ extern "C" {
 #ifndef NRF_802154_CARRIER_FUNCTIONS_ENABLED
 #define NRF_802154_CARRIER_FUNCTIONS_ENABLED 1
 #endif
+
+/**
+ * @def NRF_802154_NOTIFICATION_IMPL_DIRECT
+ *
+ * Use nrf_802154_notification_direct.c implementation.
+ * See @ref NRF_802154_NOTIFICATION_IMPL.
+ */
+#define NRF_802154_NOTIFICATION_IMPL_DIRECT 0
+
+/**
+ * @def NRF_802154_NOTIFICATION_IMPL_SWI
+ *
+ * Use nrf_802154_notification_swi.c implementation.
+ * See @ref NRF_802154_NOTIFICATION_IMPL.
+ */
+#define NRF_802154_NOTIFICATION_IMPL_SWI  1
+
+/**
+ * @def NRF_802154_NOTIFICATION_IMPL
+ *
+ * Selects implementation of internal "notification" module.
+ * Possible values:
+ *   @ref NRF_802154_NOTIFICATION_IMPL_DIRECT,
+ *   @ref NRF_802154_NOTIFICATION_IMPL_SWI
+ */
+#ifndef NRF_802154_NOTIFICATION_IMPL
+#define NRF_802154_NOTIFICATION_IMPL NRF_802154_NOTIFICATION_IMPL_SWI
+#endif
+
+/**
+ * @def NRF_802154_REQUEST_IMPL_DIRECT
+ *
+ * Use nrf_802154_request_direct.c implementation.
+ * See @ref NRF_802154_NOTIFICATION_IMPL.
+ */
+#define NRF_802154_REQUEST_IMPL_DIRECT 0
+
+/**
+ * @def NRF_802154_REQUEST_IMPL_DIRECT
+ *
+ * Use nrf_802154_request_swi.c implementation.
+ * See @ref NRF_802154_REQUEST_IMPL.
+ */
+#define NRF_802154_REQUEST_IMPL_SWI    1
+
+/**
+ * @def NRF_802154_REQUEST_IMPL
+ *
+ * Selects implementation of internal "request" module.
+ * Possible values:
+ *   @ref NRF_802154_REQUEST_IMPL_DIRECT,
+ *   @ref NRF_802154_REQUEST_IMPL_SWI
+ */
+#ifndef NRF_802154_REQUEST_IMPL
+#define NRF_802154_REQUEST_IMPL NRF_802154_REQUEST_IMPL_SWI
+#endif
+
+/** @} */
 
 /**
  *@}

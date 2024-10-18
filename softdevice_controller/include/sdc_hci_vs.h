@@ -67,10 +67,6 @@ enum sdc_hci_opcode_vs
     SDC_HCI_OPCODE_CMD_VS_EVENT_LENGTH_SET = 0xfd05,
     /** @brief See @ref sdc_hci_cmd_vs_periodic_adv_event_length_set(). */
     SDC_HCI_OPCODE_CMD_VS_PERIODIC_ADV_EVENT_LENGTH_SET = 0xfd06,
-    /** @brief See @ref sdc_hci_cmd_vs_coex_scan_mode_config(). */
-    SDC_HCI_OPCODE_CMD_VS_COEX_SCAN_MODE_CONFIG = 0xfd07,
-    /** @brief See @ref sdc_hci_cmd_vs_coex_priority_config(). */
-    SDC_HCI_OPCODE_CMD_VS_COEX_PRIORITY_CONFIG = 0xfd08,
     /** @brief See @ref sdc_hci_cmd_vs_peripheral_latency_mode_set(). */
     SDC_HCI_OPCODE_CMD_VS_PERIPHERAL_LATENCY_MODE_SET = 0xfd09,
     /** @brief See @ref sdc_hci_cmd_vs_write_remote_tx_power(). */
@@ -109,6 +105,10 @@ enum sdc_hci_opcode_vs
     SDC_HCI_OPCODE_CMD_VS_SCAN_ACCEPT_EXT_ADV_PACKETS_SET = 0xfd1c,
     /** @brief See @ref sdc_hci_cmd_vs_set_role_priority(). */
     SDC_HCI_OPCODE_CMD_VS_SET_ROLE_PRIORITY = 0xfd1d,
+    /** @brief See @ref sdc_hci_cmd_vs_set_event_start_task(). */
+    SDC_HCI_OPCODE_CMD_VS_SET_EVENT_START_TASK = 0xfd1e,
+    /** @brief See @ref sdc_hci_cmd_vs_conn_anchor_point_update_event_report_enable(). */
+    SDC_HCI_OPCODE_CMD_VS_CONN_ANCHOR_POINT_UPDATE_EVENT_REPORT_ENABLE = 0xfd1f,
 };
 
 /** @brief VS subevent Code values. */
@@ -118,24 +118,8 @@ enum sdc_hci_subevent_vs
     SDC_HCI_SUBEVENT_VS_QOS_CONN_EVENT_REPORT = 0x80,
     /** @brief See @ref sdc_hci_subevent_vs_qos_channel_survey_report_t. */
     SDC_HCI_SUBEVENT_VS_QOS_CHANNEL_SURVEY_REPORT = 0x81,
-};
-
-/** @brief Bluetooth roles that are recognized by the coexistence interface. */
-enum sdc_hci_vs_coex_bt_role
-{
-    SDC_HCI_VS_COEX_BT_ROLE_ADVERTISER = 0x00,
-    SDC_HCI_VS_COEX_BT_ROLE_SCANNER = 0x01,
-    SDC_HCI_VS_COEX_BT_ROLE_CENTRAL = 0x02,
-    SDC_HCI_VS_COEX_BT_ROLE_PERIPHERAL = 0x03,
-};
-
-/** @brief Scanner coexistence session request modes. */
-enum sdc_hci_vs_coex_scan_mode
-{
-    /** @brief Request after receiving a valid access address. */
-    SDC_HCI_VS_COEX_SCAN_MODE_REQUEST_ON_AA = 0x00,
-    /** @brief Request before transmitting. */
-    SDC_HCI_VS_COEX_SCAN_MODE_REQUEST_ON_TX = 0x01,
+    /** @brief See @ref sdc_hci_subevent_vs_conn_anchor_point_update_report_t. */
+    SDC_HCI_SUBEVENT_VS_CONN_ANCHOR_POINT_UPDATE_REPORT = 0x82,
 };
 
 /** @brief Connection Event Trigger Role Selection. */
@@ -164,6 +148,19 @@ enum sdc_hci_vs_peripheral_latency_mode
     SDC_HCI_VS_PERIPHERAL_LATENCY_MODE_WAIT_FOR_ACK = 0x02,
 };
 
+/** @brief Set Event Start Task Handle Type. */
+enum sdc_hci_vs_set_event_start_task_handle_type
+{
+    /** @brief Scanner. */
+    SDC_HCI_VS_SET_EVENT_START_TASK_HANDLE_TYPE_SCAN = 0x01,
+    /** @brief Initiator. */
+    SDC_HCI_VS_SET_EVENT_START_TASK_HANDLE_TYPE_INITIATOR = 0x02,
+    /** @brief Connection. */
+    SDC_HCI_VS_SET_EVENT_START_TASK_HANDLE_TYPE_CONN = 0x03,
+    /** @brief Advertiser. */
+    SDC_HCI_VS_SET_EVENT_START_TASK_HANDLE_TYPE_ADV = 0x04,
+};
+
 /** @brief Handle type for priority update. */
 enum sdc_hci_vs_set_role_priority_handle_type
 {
@@ -182,6 +179,8 @@ enum sdc_hci_vs_tx_power_handle_type
     SDC_HCI_VS_TX_POWER_HANDLE_TYPE_CONN = 0x02,
     /** @brief Handle of type Periodic Sync. */
     SDC_HCI_VS_TX_POWER_HANDLE_TYPE_SYNC = 0x03,
+    /** @brief Handle of type ISO broadcaster. */
+    SDC_HCI_VS_TX_POWER_HANDLE_TYPE_ISO_BROADCASTER = 0x04,
 };
 
 /** @brief Supported Vendor Specific HCI Commands. */
@@ -194,8 +193,6 @@ typedef struct __PACKED __ALIGN(1)
     uint8_t qos_conn_event_report_enable : 1;
     uint8_t event_length_set : 1;
     uint8_t periodic_adv_event_length_set : 1;
-    uint8_t coex_priority_config : 1;
-    uint8_t coex_scan_mode_config : 1;
     uint8_t peripheral_latency_mode_set : 1;
     uint8_t write_remote_tx_power : 1;
     uint8_t set_adv_randomness : 1;
@@ -214,6 +211,8 @@ typedef struct __PACKED __ALIGN(1)
     uint8_t scan_channel_map_set : 1;
     uint8_t scan_accept_ext_adv_packets_set : 1;
     uint8_t set_role_priority : 1;
+    uint8_t set_event_start_task : 1;
+    uint8_t conn_anchor_point_update_event_report_enable : 1;
 } sdc_hci_vs_supported_vs_commands_t;
 
 /** @brief Zephyr Static Address type. */
@@ -279,7 +278,7 @@ typedef struct __PACKED __ALIGN(1)
  */
 typedef struct __PACKED __ALIGN(1)
 {
-    /** @brief Connnection handle corresponding to the connection event report. */
+    /** @brief Connection handle corresponding to the connection event report. */
     uint16_t conn_handle;
     /** @brief Connection event counter corresponding to the connection event report. */
     uint16_t event_counter;
@@ -309,6 +308,33 @@ typedef struct __PACKED __ALIGN(1)
     int8_t channel_energy[40];
 } sdc_hci_subevent_vs_qos_channel_survey_report_t;
 
+/** @brief Connection Anchor Point Update Report Event.
+ *
+ * The HCI_VS_conn_anchor_point_update_report event indicates that the device
+ * updated the anchor point for an ACL connection.
+ * The anchor point represents the start of the first packet of a connection event.
+ * See Core_v5.4, Vol 6, Part B, Section 4.5.1.
+ *
+ * The controller only generates HCI_VS_conn_anchor_point_update_report events
+ * if instructed to do so using the
+ * @ref sdc_hci_cmd_vs_conn_anchor_point_update_event_report_enable command.
+ *
+ * The anchor_point_us in this event is a timestamp on the controller's clock.
+ *
+ * On the central device, this event is generated every connection interval.
+ * On the peripheral device, this event is only generated for connection events in which
+ * a packet from the central device is received.
+ */
+typedef struct __PACKED __ALIGN(1)
+{
+    /** @brief Connection handle corresponding to the connection anchor point update report. */
+    uint16_t conn_handle;
+    /** @brief Connection event counter corresponding to the anchor point. */
+    uint16_t event_counter;
+    /** @brief Absolute time of the new anchor point in microseconds. */
+    uint64_t anchor_point_us;
+} sdc_hci_subevent_vs_conn_anchor_point_update_report_t;
+
 /** @} end of HCI_EVENTS */
 
 /**
@@ -331,7 +357,7 @@ typedef struct __PACKED __ALIGN(1)
     uint8_t fw_version;
     /** @brief Firmware Revision. */
     uint16_t fw_revision;
-    /** @brief Firware build revision. */
+    /** @brief Firmware build revision. */
     uint32_t fw_build;
 } sdc_hci_cmd_vs_zephyr_read_version_info_return_t;
 
@@ -470,7 +496,7 @@ typedef struct __PACKED __ALIGN(1)
 /** @brief QoS Connection Event Reports enable command parameter(s). */
 typedef struct __PACKED __ALIGN(1)
 {
-    /** @brief Set to 0 for disabling, 1 for enabling, all other values are RFU. */
+    /** @brief Set to 1 to enable, 0 to disable, all other values are RFU. */
     uint8_t enable;
 } sdc_hci_cmd_vs_qos_conn_event_report_enable_t;
 
@@ -487,30 +513,6 @@ typedef struct __PACKED __ALIGN(1)
     /** @brief Allocated periodic advertising event length in microseconds. */
     uint32_t event_length_us;
 } sdc_hci_cmd_vs_periodic_adv_event_length_set_t;
-
-/** @brief Configure Coexistence Scan Request Mode command parameter(s). */
-typedef struct __PACKED __ALIGN(1)
-{
-    /** @brief Scanner request mode. See @ref sdc_hci_vs_coex_scan_mode. */
-    uint8_t mode;
-} sdc_hci_cmd_vs_coex_scan_mode_config_t;
-
-/** @brief Configure Coexistence Per-Role Priority command parameter(s). */
-typedef struct __PACKED __ALIGN(1)
-{
-    /** @brief Current Bluetooth device role, see @ref sdc_hci_vs_coex_bt_role. */
-    uint8_t role;
-    /** @brief @ref MPSL_COEX_PRIORITY_HIGH or @ref MPSL_COEX_PRIORITY_LOW priority. */
-    uint8_t priority;
-    /** @brief When the number of denied requests to the PTA controller is larger than the
-     *         escalation threshold, the priority will be escalated. The threshold is handled only
-     *         if priority is @ref MPSL_COEX_PRIORITY_LOW. The priority will be reset to @ref
-     *         MPSL_COEX_PRIORITY_LOW after the end of the current radio activity. This means after
-     *         the end of the advertising event, scan window, or connection event. If an escalation
-     *         is not required then use @ref MPSL_COEX_ESCALATION_THRESHOLD_OFF.
-     */
-    uint8_t escalation_threshold;
-} sdc_hci_cmd_vs_coex_priority_config_t;
 
 /** @brief Set peripheral latency mode command parameter(s). */
 typedef struct __PACKED __ALIGN(1)
@@ -743,12 +745,36 @@ typedef struct __PACKED __ALIGN(1)
      */
     uint16_t handle;
     /** @brief The new priority for the role. Values from 1 to 5 set the new priority for the role,
-     *         see https://developer.nordicsemi.com/nRF_Connect_SDK/doc/latest/nrfxlib/softdevice_co
-     *         ntroller/doc/scheduling.html A value of 0xFF resets the priority to the default
-     *         selected by the controller.
+     *         see https://docs.nordicsemi.com/bundle/ncs-
+     *         latest/page/nrfxlib/softdevice_controller/doc/scheduling.html A value of 0xFF resets
+     *         the priority to the default selected by the controller.
      */
     uint8_t priority;
 } sdc_hci_cmd_vs_set_role_priority_t;
+
+/** @brief Set Event Start Task command parameter(s). */
+typedef struct __PACKED __ALIGN(1)
+{
+    /** @brief Selected handle type to set trigger for. See @ref
+     *         sdc_hci_vs_set_event_start_task_handle_type.
+     */
+    uint8_t handle_type;
+    /** @brief The handle to configure the task for. In case @ref
+     *         sdc_hci_vs_set_event_start_task_handle_type specifies the Scanner or Initiator, this
+     *         parameter is ignored. If the handle_type specifies the Advertiser and legacy
+     *         advertising is used, this parameter is ignored.
+     */
+    uint16_t handle;
+    /** @brief Task to trigger. Set this to 0 to disable this feature. */
+    uint32_t task_address;
+} sdc_hci_cmd_vs_set_event_start_task_t;
+
+/** @brief Connection Anchor Point Update Event Reports enable command parameter(s). */
+typedef struct __PACKED __ALIGN(1)
+{
+    /** @brief Set to 1 to enable, 0 to disable, all other values are RFU. */
+    uint8_t enable;
+} sdc_hci_cmd_vs_conn_anchor_point_update_event_report_enable_t;
 
 /** @} end of HCI_COMMAND_PARAMETERS */
 
@@ -1035,7 +1061,7 @@ uint8_t sdc_hci_cmd_vs_conn_update(const sdc_hci_cmd_vs_conn_update_t * p_params
  *
  * A connection event can not be extended beyond the connection interval.
  *
- * By default, that is after an HCI Reset, Extended Connection Events are enabled.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
@@ -1056,6 +1082,8 @@ uint8_t sdc_hci_cmd_vs_conn_event_extend(const sdc_hci_cmd_vs_conn_event_extend_
  * every connection event.
  *
  * @note If the application does not pull a report in time, it will be overwritten.
+ *
+ * After HCI Reset, this feature is disabled.
  *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
@@ -1115,6 +1143,8 @@ uint8_t sdc_hci_cmd_vs_event_length_set(const sdc_hci_cmd_vs_event_length_set_t 
  *
  * The default event length is 7500 us.
  *
+ * The configured value is retained after issuing an HCI Reset command.
+ *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
  *
@@ -1125,41 +1155,6 @@ uint8_t sdc_hci_cmd_vs_event_length_set(const sdc_hci_cmd_vs_event_length_set_t 
  *         See Vol 2, Part D, Error for a list of error codes and descriptions.
  */
 uint8_t sdc_hci_cmd_vs_periodic_adv_event_length_set(const sdc_hci_cmd_vs_periodic_adv_event_length_set_t * p_params);
-
-/** @brief Configure Coexistence Scan Request Mode.
- *
- * This vendor specific command is used to configure the way the scanner requests a coexistence
- * session.
- * Either the scanner requests a coex session as soon as it has received a valid access address, or
- * it
- * only requests before transmitting.
- *
- * Event(s) generated (unless masked away):
- * When the command has completed, an HCI_Command_Complete event shall be generated.
- *
- * @param[in]  p_params Input parameters.
- *
- * @retval 0 if success.
- * @return Returns value between 0x01-0xFF in case of error.
- *         See Vol 2, Part D, Error for a list of error codes and descriptions.
- */
-uint8_t sdc_hci_cmd_vs_coex_scan_mode_config(const sdc_hci_cmd_vs_coex_scan_mode_config_t * p_params);
-
-/** @brief Configure Coexistence Per-Role Priority.
- *
- * This vendor specific command is used to configure the external radio coexistence
- * priorities depending on the Bluetooth device role.
- *
- * Event(s) generated (unless masked away):
- * When the command has completed, an HCI_Command_Complete event shall be generated.
- *
- * @param[in]  p_params Input parameters.
- *
- * @retval 0 if success.
- * @return Returns value between 0x01-0xFF in case of error.
- *         See Vol 2, Part D, Error for a list of error codes and descriptions.
- */
-uint8_t sdc_hci_cmd_vs_coex_priority_config(const sdc_hci_cmd_vs_coex_priority_config_t * p_params);
 
 /** @brief Set peripheral latency mode.
  *
@@ -1218,6 +1213,9 @@ uint8_t sdc_hci_cmd_vs_write_remote_tx_power(const sdc_hci_cmd_vs_write_remote_t
  * This vendor specific command is used to change the randomness of advertisers.
  * The setting applies to all subsequent advertising events of a given set.
  *
+ * The configured randomness for the very first advertising event is retained after issuing an HCI
+ * Reset command.
+ *
  * Event(s) generated (unless masked away):
  * When the Controller receives the command, the Controller sends the HCI_Command_Complete
  * event to the Host.
@@ -1239,6 +1237,8 @@ uint8_t sdc_hci_cmd_vs_set_adv_randomness(const sdc_hci_cmd_vs_set_adv_randomnes
  * central device and initiate a connection to a peripheral device.
  * In that case it may lead to the connection creation taking up to one
  * connection interval longer to complete for all connections.
+ *
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * By default this mode is disabled.
  *
@@ -1271,7 +1271,7 @@ uint8_t sdc_hci_cmd_vs_compat_mode_window_offset_set(const sdc_hci_cmd_vs_compat
  * In order to use the QoS channel survey module, funcref:sdc_support_qos_channel_survey
  * must be called.
  *
- * Event(s) geneated (unless masked away):
+ * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
  *
  * @param[in]  p_params Input parameters.
@@ -1314,6 +1314,8 @@ uint8_t sdc_hci_cmd_vs_qos_channel_survey_enable(const sdc_hci_cmd_vs_qos_channe
  * When this command is issued, the controller stores the parameters and
  * uses them for the subsequent LE Power Control Request procedures across all the connections.
  *
+ * After HCI Reset, all parameters are set to the default values.
+ *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
  *
@@ -1354,7 +1356,7 @@ uint8_t sdc_hci_cmd_vs_read_average_rssi(const sdc_hci_cmd_vs_read_average_rssi_
  * This API must be called before issuing a command to create a connection.
  *
  * The default event spacing is 7500 us.
- * The configured value is retained after issuing a HCI Reset command.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * Note: The time available for transmission and reception is not configured using this API
  *
@@ -1409,6 +1411,8 @@ uint8_t sdc_hci_cmd_vs_central_acl_event_spacing_set(const sdc_hci_cmd_vs_centra
  * If the role is 0x1, 0x2, or 0x4 and conn_evt_counter_start or period_in_events is non-zero,
  * the controller will return the error code Invalid HCI Command Parameters (0x12).
  *
+ * After HCI Reset, this feature is disabled.
+ *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
  *
@@ -1451,7 +1455,7 @@ uint8_t sdc_hci_cmd_vs_get_next_conn_event_counter(const sdc_hci_cmd_vs_get_next
  * initiating before a connection establishment to a synchronized device
  * has been completed.
  *
- * By default this functionality is disabled.
+ * After HCI Reset, this feature is disabled.
  *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
@@ -1489,7 +1493,7 @@ uint8_t sdc_hci_cmd_vs_allow_parallel_connection_establishments(const sdc_hci_cm
  * for applications interacting with devices qualified for Bluetooth Specification 5.1 or
  * older.
  *
- * The value is preserved when issuing the HCI Reset command.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * See also @ref sdc_hci_cmd_vs_event_length_set().
  *
@@ -1553,8 +1557,8 @@ uint8_t sdc_hci_cmd_vs_iso_read_tx_timestamp(const sdc_hci_cmd_vs_iso_read_tx_ti
  * This vendor specific command changes the time reserved at the end of a BIG event for other roles.
  * This applies to all BIGs created after calling this command.
  *
- * The default value is 1600 us, but can be set to between 0 us and 4,000,000 us. Changes persist
- * after an HCI_Reset command.
+ * The default value is 1600 us, but can be set to between 0 us and 4,000,000 us.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * If the value is set such that it cannot be satisfied for a given set of BIG parameters, BIG
  * creation will fail with error code UNSUPPORTED_FEATURE_OR_PARAMETER_VALUE (0x11).
@@ -1580,8 +1584,8 @@ uint8_t sdc_hci_cmd_vs_big_reserved_time_set(const sdc_hci_cmd_vs_big_reserved_t
  * Note, when multiple CIGs are used the user needs to ensure that the initial CIG reserves time
  * for the remaining CIGs.
  *
- * The default value is 1300 us, but can be set to between 0 us and 4,000,000 us. Changes persist
- * after an HCI_Reset command.
+ * The default value is 1300 us, but can be set to between 0 us and 4,000,000 us.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * If the value is set such that it cannot be satisfied for a given set of CIG parameters, the
  * actual
@@ -1612,7 +1616,7 @@ uint8_t sdc_hci_cmd_vs_cig_reserved_time_set(const sdc_hci_cmd_vs_cig_reserved_t
  *
  * This API must be called before creating a CIG.
  *
- * The configured value is preserved when issuing the HCI Reset command.
+ * The configured value is retained after issuing an HCI Reset command.
  *
  * Event(s) generated (unless masked away):
  * When the command has completed, an HCI_Command_Complete event shall be generated.
@@ -1632,7 +1636,7 @@ uint8_t sdc_hci_cmd_vs_cis_subevent_length_set(const sdc_hci_cmd_vs_cis_subevent
  * commands to start scanning or to create connections. Scanning and initiating
  * that was started before issuing this command is not affected.
  *
- * The default behavior is to listan on all primary advertising channels.
+ * The default behavior is to listen on all primary advertising channels.
  * The default behavior is restored when issuing the HCI Reset command.
  *
  * Event(s) generated (unless masked away):
@@ -1680,7 +1684,7 @@ uint8_t sdc_hci_cmd_vs_scan_accept_ext_adv_packets_set(const sdc_hci_cmd_vs_scan
  * https://docs.nordicsemi.com/bundle/ncs-
  * latest/page/nrfxlib/softdevice_controller/doc/scheduling.html
  *
- * Priority changes configured using this API are not persisted on resets.
+ * After HCI Reset, priority is set to the default value.
  *
  * If the handle is not associated with an instance of the role_id type,
  * the error code Unknown Connection Identifier (0x02) is returned.
@@ -1701,6 +1705,67 @@ uint8_t sdc_hci_cmd_vs_scan_accept_ext_adv_packets_set(const sdc_hci_cmd_vs_scan
  *         See Vol 2, Part D, Error for a list of error codes and descriptions.
  */
 uint8_t sdc_hci_cmd_vs_set_role_priority(const sdc_hci_cmd_vs_set_role_priority_t * p_params);
+
+/** @brief Set Event Start Task.
+ *
+ * When enabled, this feature will trigger the specified peripheral task register right before
+ * the first radio activity of a timing-event.
+ *
+ * For activities with a handle, the task configuration is automatically reset when the
+ * controller deletes the handle.
+ *
+ * If enabling the task and it is already enabled for the given handle and
+ * handle_type, the controller will return the error code Command Disallowed (0x0C).
+ *
+ * If the advertising handle is not currently active, the controller will return the error code
+ * Unknown Advertising Identifier (0x42).
+ *
+ * If the connection handle is not currently active, the controller will return the error code
+ * Unknown Connection Identifier (0x2).
+ *
+ * If the selected handle_type is not supported by this SDC variant, the controller will
+ * return the error code Unsupported Feature or Parameter Value (0x11).
+ *
+ * After HCI Reset, this feature is disabled.
+ *
+ * Event(s) generated (unless masked away):
+ * When the command has completed, an HCI_Command_Complete event shall be generated.
+ *
+ * @param[in]  p_params Input parameters.
+ *
+ * @retval 0 if success.
+ * @return Returns value between 0x01-0xFF in case of error.
+ *         See Vol 2, Part D, Error for a list of error codes and descriptions.
+ */
+uint8_t sdc_hci_cmd_vs_set_event_start_task(const sdc_hci_cmd_vs_set_event_start_task_t * p_params);
+
+/** @brief Connection Anchor Point Update Event Reports enable.
+ *
+ * This vendor specific command is used to enable or disable generation of
+ * VS_Conn_Anchor_Point_Update_Report events. See @ref
+ * sdc_hci_subevent_vs_conn_anchor_point_update_report_t.
+ *
+ * When enabled, the controller will start producing reports for all ACL connections whenever
+ * a connection anchor point is updated. See Core_v5.4, Vol 6, Part B, Section 4.5.1.
+ *
+ * This event is generated every connection interval.
+ * For peripheral connections, the generation of this event is skipped if no packet from the
+ * central is received.
+ *
+ * If the application does not pull a report in time, it will be overwritten.
+ *
+ * After HCI Reset, this feature is disabled.
+ *
+ * Event(s) generated (unless masked away):
+ * When the command has completed, an HCI_Command_Complete event shall be generated.
+ *
+ * @param[in]  p_params Input parameters.
+ *
+ * @retval 0 if success.
+ * @return Returns value between 0x01-0xFF in case of error.
+ *         See Vol 2, Part D, Error for a list of error codes and descriptions.
+ */
+uint8_t sdc_hci_cmd_vs_conn_anchor_point_update_event_report_enable(const sdc_hci_cmd_vs_conn_anchor_point_update_event_report_enable_t * p_params);
 
 /** @} end of HCI_VS_API */
 

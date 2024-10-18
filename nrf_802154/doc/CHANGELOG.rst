@@ -13,10 +13,36 @@ See also :ref:`nrf_802154_limitations` for permanent limitations.
 Main branch - nRF 802.15.4 Radio Driver
 ***************************************
 
+
+nRF Connect SDK v2.8.0 - nRF 802.15.4 Radio Driver
+**************************************************
+
+Notable changes
+===============
+
+* If a time slot ends while waiting for or receiving an ACK frame, the transmission terminates with the :c:macro:`NRF_802154_TX_ERROR_NO_ACK` error code.
+  This behavior allows the higher layer to distinguish between a frame that was not transmitted and a frame that was transmitted but did not receive an ACK frame. (KRKNWK-19126)
+* When the nRF 802.15.4 Radio Driver prepares for a reception but no free buffer is left, the :c:func:`nrf_802154_receive_failed` callout is generated with a new error code :c:macro:`NRF_802154_RX_ERROR_NO_BUFFER`. (KRKNWK-19304)
+* The default assignment of the DPPI channels on the nRF54L Series is changed so that the channels 14 and 15 are left unused for other purposes. (KRKNWK-19349)
+* The binaries of the nRF 802.15.4 SL library for the nRF54L15 SoC are provided also for the non-secure operation. (KRKNWK-19338)
+* The internal implementation of *notification* module is selected by the :c:macro:`NRF_802154_NOTIFICATION_IMPL` configuration macro.
+  The internal implementation of *request* module is selected by the :c:macro:`NRF_802154_REQUEST_IMPL` configuration macro.
+* Introduced limited support for receiving and transmitting multipurpose frames. (KRKNWK-19492)
+
+Added
+=====
+
+* Added the :c:macro:`NRF_802154_EGU_USED_CHANNELS_MASK` to inform about the fixed EGU channels used by the driver. (KRKNWK-19408)
+* Added the functions :c:func:`nrf_802154_cst_writer_period_set` and :c:func:`nrf_802154_cst_writer_anchor_time_set`. (KRKNWK-19492)
+
+nRF Connect SDK v2.7.0 - nRF 802.15.4 Radio Driver
+**************************************************
+
 Bug fixes
 =========
 
 * Fixed an issue causing the driver to report a very inaccurate timestamp if a delayed operation starts shortly after sleep request. (KRKNWK-18589)
+* Fixed an issue causing the build for the nRF54L15 SoC with :kconfig:option:`CONFIG_FPU` set to ``y`` to fail. (KRKNWK-19373)
 
 nRF Connect SDK v2.6.0 - nRF 802.15.4 Radio Driver
 **************************************************
@@ -258,7 +284,7 @@ Added
 Notable Changes
 ===============
 
-* The release notes of the legacy versions of the Radio Driver are available in the `Radio Driver section`_.
+* The release notes of the legacy versions of the Radio Driver are available in the `Radio Driver section`_ of the Infocenter.
 * The changelog of the previous versions of the 802.15.4 SL library is now located at the bottom of this page.
 * The Radio Driver documentation will now also include the Service Layer documentation.
 * Future versions of the Radio Driver and the Service Layer will follow NCS version tags.

@@ -68,8 +68,9 @@ int nrf_rpc_cbor_cmd_rsp(const struct nrf_rpc_group *group, uint8_t cmd,
 			      &rsp_size);
 
 	if (err >= 0) {
-		zcbor_new_decode_state(ctx->zs, ARRAY_SIZE(ctx->zs),
+		zcbor_new_decode_state(ctx->zs, ZCBOR_ARRAY_SIZE(ctx->zs),
 				       ctx->out_packet, rsp_size, NRF_RPC_MAX_PARAMETERS, NULL, 0);
+		ctx->zs->constant_state->stop_on_error = true;
 	}
 
 	return err;
@@ -176,15 +177,16 @@ void _nrf_rpc_cbor_proxy_handler(const struct nrf_rpc_group *group, const uint8_
 	struct _nrf_rpc_cbor_decoder *cbor_handler =
 		(struct _nrf_rpc_cbor_decoder *)handler_data;
 
-	zcbor_new_decode_state(ctx.zs, ARRAY_SIZE(ctx.zs), ctx.out_packet, len,
+	zcbor_new_decode_state(ctx.zs, ZCBOR_ARRAY_SIZE(ctx.zs), ctx.out_packet, len,
 			       NRF_RPC_MAX_PARAMETERS, NULL, 0);
+	ctx.zs->constant_state->stop_on_error = true;
 
 	return cbor_handler->handler(group, &ctx, cbor_handler->handler_data);
 }
 
 void _nrf_rpc_cbor_prepare(struct nrf_rpc_cbor_ctx *ctx, size_t len)
 {
-	zcbor_new_encode_state(ctx->zs, ARRAY_SIZE(ctx->zs), ctx->out_packet,
+	zcbor_new_encode_state(ctx->zs, ZCBOR_ARRAY_SIZE(ctx->zs), ctx->out_packet,
 			       len, 0);
 	ctx->zs->constant_state->stop_on_error = true;
 }

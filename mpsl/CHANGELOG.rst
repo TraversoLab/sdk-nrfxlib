@@ -13,6 +13,24 @@ Main Branch
 Changes
 =======
 
+* On nRF54L Series devices, the application now needs to implement :c:func:`mpsl_constlat_request_callback` and :c:func:`mpsl_lowpower_request_callback`.
+  This is already added to the MPSL driver in the |NCS|. (DRGN-22562)
+* Removed the :file:`mpsl_coex.h` API. (DRGN-22567)
+* The timeslot implementation now starts ``TIMER0`` a couple microseconds later.
+  It now starts when the ``MPSL_TIMESLOT_SIGNAL_START`` callback is given.
+
+Added
+=====
+
+* Added :c:func:`mpsl_fem_enable` to allow turning on the Front-End Module earlier than through a call to :c:func:`mpsl_fem_pa_configuration_set` (KRKNWK-19275).
+  Added implementation of :c:func:`mpsl_fem_enable` for nRF2220 Front-End Module.
+
+nRF Connect SDK v2.7.0
+**********************
+
+Changes
+=======
+
 * The default bit width within timeslots for ``TIMER0`` has been increased from 24 to 32 bits.
   The user may still configure ``TIMER0`` however they like during the timeslot. (DRGN-19050)
 * New FEM protocol APIs are provided to control the PA power, the previous APIs are removed.
