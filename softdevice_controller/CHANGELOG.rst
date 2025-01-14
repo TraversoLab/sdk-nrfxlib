@@ -15,6 +15,66 @@ Main branch
 Added
 =====
 
+* Support generating the HCI LE CIS Established v2 event. (DRGN-24112)
+* Support for the Advertising Coding Selection feature as an advertiser or scanner. (DRGN-23744)
+
+  * For an advertiser, this adds support for the LE Set Extended Advertising Parameters [v2] HCI command.
+  * For a scanner, the advertising reports will contain the coding scheme for packets received over LE Coded PHY when the host feature bit is enabled.
+
+Changes
+=======
+
+* The CIS or BIS sink now generate lost SDUs immediately when scheduling conflicts occur instead of after receiving the next valid SDU. (DRGN-24062)
+* Removed support for running the SoftDevice Controller on the nRF54L15 DK v0.8.1 and earlier. (DRGN-21403)
+
+Bug fixes
+=========
+
+* Fixed an issue where ACL connections could not be created if a Periodic Advertiser was configured when the :kconfig:option:`CONFIG_BT_CTLR_SDC_PAWR_ADV` Kconfig option was selected. (DRGN-24148)
+* Fixed a rare issue where the scanner would assert when scanning and initiating at the same time. (DRGN-24198)
+  The issue would only happen if all the conditions are met:
+
+    * :kconfig:option:`BT_CTLR_SDC_ALLOW_PARALLEL_SCANNING_AND_INITIATING` is set to the non-default value 2.
+    * The initiator has received a connectable ``ADV_EXT_IND``.
+    * The initiator is canceled.
+
+nRF Connect SDK v2.9.0
+**********************
+
+Added
+=====
+
+* Production support for scanning and initiating at the same time. (DRGN-23824)
+* :ref:`Experimental <nrf:software_maturity>` support for Channel Sounding step mode-3.
+* :ref:`Experimental <nrf:software_maturity>` support for Channel Sounding multiple antenna elements.
+* :ref:`Experimental <nrf:software_maturity>` support for the following Channel Sounding HCI commands:
+
+    * LE CS Write Cached Remote Supported Capabilities
+    * LE CS Write Cached Remote FAE Table
+    * LE CS Remove Config
+
+Changes
+=======
+
+* The vendor-specific Set Connection Event Trigger HCI command has been removed. (DRGN-23981)
+
+Bug fixes
+=========
+
+* Fixed an issue where the CIS central running on an nRF53 Series device could set an invalid MIC when sending encrypted ISO packets. (DRGN-23776)
+* Fixed a rare issue where the scanner may give a single advertising report with corrupted data when restarting scanning.
+  The issue would only happen when the scanner received a long extended advertising packet that did not fit into a single advertising report and the scanning was stopped explicitly or through a timeout. (DRGN-23966)
+* Fixed an issue where the CIS TX Power was set according to the LE Power Control state of the previous CIS in a CIG. (DRGN-21721)
+* Fixed an issue where the BIS receiver running with FEM could enable the radio at the wrong time, causing the receiver to drop packets and lose sync. (DRGN-23891)
+* Fixed an issue where the controller would raise Number Of Completed Packets events for a disconnected CIS. (DRGN-23869)
+
+nRF Connect SDK v2.8.0
+**********************
+
+Added
+=====
+
+* Production support for the nRF54L Series. (DRGN-23325)
 * Support for the LE Set Path Loss Reporting Parameters and LE Set Path Loss Reporting Enable HCI commands. (DRGN-17376)
 * Support for generating connection anchor update event reports using the VS Conn Anchor Point Update Report Enable command.
   When enabled, one report is generated when the anchor point of a connection is updated.
@@ -23,10 +83,32 @@ Added
   See :c:func:`sdc_hci_cmd_vs_set_event_start_task`. (DRGN-20737)
 * Support for the LE Set Default Subrate and LE Subrate Request HCI commands. (DRGN-19745)
 * Support for ISO broadcaster handles in the :c:func:`sdc_hci_cmd_vs_zephyr_write_tx_power` and :c:func:`sdc_hci_cmd_vs_zephyr_read_tx_power` commands (DRGN-23441).
+* :ref:`Experimental <nrf:software_maturity>` support for Channel Sounding (CS) on nRF54L Series devices.
+  Currently, the |controller| only supports one subevent per event.
+  The following HCI commands are now supported:
+
+    * LE CS Read Local Supported Capabilities
+    * LE CS Read Remote Supported Capabilities
+    * LE CS Security Enable
+    * LE CS Set Default Settings
+    * LE CS Read Remote FAE Table
+    * LE CS Create Config
+    * LE CS Set Channel Classification
+    * LE CS Set Procedure Parameters
+    * LE CS Procedure Enable
+    * LE CS Test
+    * LE CS Test End
+
+* The defines :c:macro:`SDC_PPI_CHANNELS_USED_MASK`, :c:macro:`SDC_DPPI_CHANNELS_USED_MASK`, :c:macro:`SDC_DPPIC10_CHANNELS_USED_MASK`, :c:macro:`SDC_DPPIC00_CHANNELS_USED_MASK`, :c:macro:`SDC_DPPIC020_CHANNELS_USED_MASK`, and :c:macro:`SDC_DPPIC030_CHANNELS_USED_MASK`.
+  These represent the PPI resources used in the SoftDevice Controller.
+* The defines :c:macro:`SDC_PPIB00_CHANNELS_USED_MASK`, :c:macro:`SDC_PPIB10_CHANNELS_USED_MASK`, :c:macro:`SDC_PPIB020_CHANNELS_USED_MASK`, and :c:macro:`SDC_PPIB030_CHANNELS_USED_MASK`.
+  These represent the PPIB resources used in the SoftDevice Controller.
 
 Changes
 =======
 
+* Removed support for running the SoftDevice Controller on the nRF54L15 PDK v0.7.0 and earlier. (DRGN-23325)
+* Removed support for running the SoftDevice Controller on the Engineering A revision of the nRF54H20 SoC. (DRGN-23325)
 * The ``VersNr`` field in the ``LL_VERSION_IND`` packet now contains the value ``0x0E`` to indicate compatibility with Bluetooth Core Specification v6.0 (DRGN-23211).
 * The ``sdc_coex_adv_mode_configure`` API has been deprecated as it is not applicable to any supported coexistence interfaces. (DRGN-20876).
 * The ``sdc_hci_cmd_vs_coex_priority_config`` and ``sdc_hci_cmd_vs_coex_scan_mode_config`` vendor-specific HCI commands have been removed as they are not applicable to any supported coexistence interfaces. (DRGN-20876)
@@ -48,6 +130,8 @@ Changes
 * Generating the Number of Completed Packets event is now prioritized above all other events.
   The event is generated irrespective of the state of the Controller to Host data flow control. (DRGN-23284)
 * When a link disconnects, the controller will now raise one or more Number Of Completed Packets events for data packets not ACKed by the peer device. (DRGN-23302)
+* Isochronous roles may now produce HCI ISO data with SDUs containing the ``0b01`` packet status flag which indicates "possibly invalid data".
+  This is the case if the peer sends invalid data. (DRGN-23420)
 
 Bug fixes
 =========
@@ -90,6 +174,16 @@ Bug fixes
 * Fixed an issue where LE Power Control was not being used for CISes which are not the first CIS in a CIG. (DRGN-23291)
 * Fixed an issue where the SoftDevice Controller in the peripheral role could terminate a connection due to a MIC failure during a valid encryption start procedure.
   This could only happen if the ``LL_ENC_RSP`` packet was corrupted due to on-air interference. (DRGN-23204)
+* Fixed an issue where received unframed Isochronous SDUs were not reported to be a SDU interval apart.
+  This could happen when the ISO interval is greater than the SDU interval and multiple SDUs can be received in a single ISO interval. (DRGN-23586)
+* Fixed an issue where the sleep clock accuracy communicated to the peer was too inaccurate if MPSL was initialized with a low frequency clock accuracy better than 20ppm. (DRGN-23693)
+* Fixed a rare issue in the controller that could lead to a bus fault. (DRGN-22036)
+
+  This could only happen when all of the following conditions were met:
+
+    * The host was too slow at pulling HCI events.
+    * One or more HCI events had been masked in the controller.
+    * The controller was raising ACL or ISO data to the host.
 
 nRF Connect SDK v2.7.0
 **********************
